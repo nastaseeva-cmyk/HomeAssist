@@ -1,0 +1,1 @@
+curl -X POST http://localhost:8000/stt   -H "Content-Type: audio/wav"   --data-binary @../Speaking/voices/quest.wav

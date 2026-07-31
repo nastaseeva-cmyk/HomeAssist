@@ -1,0 +1,18 @@
+# Python caches
+**/__pycache__/
+*.py[cod]
+
+# Generated media files
+Hearing/audio/*
+Speaking/audio/*
+Thinking/images/*
+
+# Android / IDE artifacts
+*.iml
+.gradle/
+local.properties
+.idea/
+TabletApp/.gradle/
+TabletApp/build/
+TabletApp/app/build/
+TabletApp/local.properties
