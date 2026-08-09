@@ -1,6 +1,9 @@
 # Python caches
 **/__pycache__/
 *.py[cod]
+*.jpeg
+*.jpg
+*.png
 
 # Generated media files
 Hearing/audio/*
