@@ -36,6 +36,8 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.eva.homeassist.ui.theme.HomeAssistTheme
 import android.view.WindowManager
+import androidx.compose.runtime.mutableLongStateOf
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -73,16 +75,28 @@ fun MainScreen() {
     var rawLookOffset by remember { mutableStateOf(Offset.Zero) }
     var isPersonDetected by remember { mutableStateOf(false) }
     var rawPersonScale by remember { mutableFloatStateOf(0f) }
-
     var aiMessage by remember { mutableStateOf("") }
-
     var isTalking by remember { mutableStateOf(false) }
+
+    var cooldownExpiration by remember { mutableLongStateOf(0L) }
+    var isCooling by remember { mutableStateOf(false) }
 
     val animatedLookOffset by animateOffsetAsState(
         targetValue = rawLookOffset,
         animationSpec = spring(dampingRatio = 0.7f, stiffness = Spring.StiffnessLow),
         label = "eyeTrackingAnimation"
     )
+
+    LaunchedEffect(cooldownExpiration) {
+        val now = System.currentTimeMillis()
+        if (cooldownExpiration > now) {
+            isCooling = true
+            delay(cooldownExpiration - now)
+            isCooling = false
+        } else {
+            isCooling = false
+        }
+    }
 
     val animatedPersonScale by animateFloatAsState(
         targetValue = rawPersonScale,
@@ -97,7 +111,8 @@ fun MainScreen() {
             lookOffset = animatedLookOffset,
             isPersonDetected = isPersonDetected,
             personScale = animatedPersonScale,
-            isTalking = isTalking
+            isTalking = isTalking,
+            isCooling = isCooling
         )
 
         Box(
@@ -125,6 +140,9 @@ fun MainScreen() {
                                 onComplete = { isTalking = false }
                             )
                         }
+                    },
+                    onCooldownActivated = { newExpirationTime ->
+                        cooldownExpiration = newExpirationTime
                     }
                 )
             } else {

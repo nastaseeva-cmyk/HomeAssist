@@ -1,0 +1,33 @@
+
+
+
+Processing images/capture_1786383831605.jpg: ```json
+{
+  "RESIDENT_IN_PICTURE": "YES",
+  "MULTIPLE_PEOPLE": "NO",
+  "STATUS": "OK",
+  "GREETING": "Bună ziua! Sper să vă merge bine astăzi."
+}
+```
+
+
+
+Processing images/capture_1786383609797.jpg: ```json
+{
+  "RESIDENT_IN_PICTURE": "YES",
+  "MULTIPLE_PEOPLE": "YES",
+  "STATUS": "OK",
+  "GREETING": "Bună ziua! Sper să vă merge bine astăzi."
+}
+```
+
+
+
+Processing images/capture_1786383752711.jpg: ```json
+{
+  "RESIDENT_IN_PICTURE": "YES",
+  "MULTIPLE_PEOPLE": "YES",
+  "STATUS": "OK",
+  "GREETING": "Bună ziua! Sper că vă simțiți bine astăzi."
+}
+```

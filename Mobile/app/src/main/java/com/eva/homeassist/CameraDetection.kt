@@ -2,6 +2,7 @@ package com.eva.homeassist
 
 import android.graphics.Bitmap
 import android.graphics.Matrix
+import android.graphics.RectF
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
@@ -24,13 +25,17 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import com.google.android.gms.tasks.Tasks
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.face.FaceDetection
+import com.google.mlkit.vision.face.FaceDetectorOptions
 import org.tensorflow.lite.support.image.TensorImage
 import org.tensorflow.lite.task.vision.detector.ObjectDetector
 import java.util.concurrent.Executors
 import kotlin.math.max
 
 data class DetectedObjectState(
-    val boundingBox: android.graphics.RectF,
+    val boundingBox: RectF,
     val label: String
 )
 
@@ -38,11 +43,14 @@ data class DetectedObjectState(
 fun FrontCameraPreview(
     modifier: Modifier = Modifier,
     onPersonDetected: (Offset, Boolean, Float) -> Unit,
-    onInferenceResult: (String, String?) -> Unit
+    onInferenceResult: (String, String?) -> Unit,
+    onCooldownActivated: (Long) -> Unit
 ) {
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
     var detectedObjects by remember { mutableStateOf(emptyList<DetectedObjectState>()) }
+    var detectedFaces by remember { mutableStateOf(emptyList<RectF>()) }
+
     var imageWidth by remember { mutableIntStateOf(1) }
     var imageHeight by remember { mutableIntStateOf(1) }
 
@@ -68,8 +76,12 @@ fun FrontCameraPreview(
                         .build()
                     val objectDetector = ObjectDetector.createFromFileAndOptions(context, "efficientdet.tflite", options)
 
-                    val executor = Executors.newSingleThreadExecutor()
+                    val faceDetectorOptions = FaceDetectorOptions.Builder()
+                        .setPerformanceMode(FaceDetectorOptions.PERFORMANCE_MODE_FAST)
+                        .build()
+                    val faceDetector = FaceDetection.getClient(faceDetectorOptions)
 
+                    val executor = Executors.newSingleThreadExecutor()
                     val imageAnalysis = ImageAnalysis.Builder()
                         .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
                         .build()
@@ -94,32 +106,50 @@ fun FrontCameraPreview(
                                 )
                             }
 
+                            val inputImage = InputImage.fromBitmap(rotatedBitmap, 0)
+                            val rawFaces = Tasks.await(faceDetector.process(inputImage))
+
                             val person = results.firstOrNull { it.categories.firstOrNull()?.label?.equals("person", ignoreCase = true) == true }
+
+                            val faces = if (person != null) rawFaces else emptyList()
+                            detectedFaces = faces.map { RectF(it.boundingBox) }
+
+                            val firstFace = faces.firstOrNull()
                             val currentTime = System.currentTimeMillis()
 
                             if (person != null) {
                                 uploadState.isPresent = true
 
-                                uploadState.isPresent = true
-
                                 if (!uploadState.hasUploadedCurrentSession && currentTime >= uploadState.cooldownUntil) {
                                     uploadState.hasUploadedCurrentSession = true
-
                                     uploadImageToBackend(rotatedBitmap) { resultText, audioUrl ->
                                         onInferenceResult(resultText, audioUrl)
+                                        val newCooldown = System.currentTimeMillis() + COOLDOWN_TIME_MS
+                                        uploadState.cooldownUntil = newCooldown
+                                        onCooldownActivated(newCooldown)
                                     }
                                 }
 
-                                val rect = person.boundingBox
-                                val cx = (rect.left + rect.right) / 2f
-                                val cy = (rect.top + rect.bottom) / 2f
+                                val trackingRect = if (firstFace != null) {
+                                    RectF(firstFace.boundingBox)
+                                } else {
+                                    person.boundingBox
+                                }
+
+                                val cx = (trackingRect.left + trackingRect.right) / 2f
+                                val cy = (trackingRect.top + trackingRect.bottom) / 2f
 
                                 val rawNormX = cx / imageWidth
                                 val screenNormX = (1f - rawNormX) * 2f - 1f
                                 val screenNormY = (cy / imageHeight) * 2f - 1f
-                                val verticalScale = rect.height() / imageHeight.toFloat()
 
-                                onPersonDetected(Offset(screenNormX, screenNormY), true, verticalScale)
+                                val verticalScale = if (person != null) {
+                                    person.boundingBox.height() / imageHeight.toFloat()
+                                } else {
+                                    (trackingRect.height() / imageHeight.toFloat()) * 4f
+                                }
+
+                                onPersonDetected(Offset(screenNormX, screenNormY), true, verticalScale.coerceIn(0f, 1f))
                             } else {
                                 if (uploadState.isPresent) {
                                     uploadState.isPresent = false
@@ -162,8 +192,13 @@ fun FrontCameraPreview(
             val offsetX = (canvasWidth - imageWidth * scale) / 2f
             val offsetY = (canvasHeight - imageHeight * scale) / 2f
 
-            val paint = android.graphics.Paint().apply {
+            val paintGreen = android.graphics.Paint().apply {
                 color = android.graphics.Color.GREEN
+                textSize = 30f
+            }
+
+            val paintRed = android.graphics.Paint().apply {
+                color = android.graphics.Color.RED
                 textSize = 30f
             }
 
@@ -181,8 +216,23 @@ fun FrontCameraPreview(
                         size = Size(mappedRight - mappedLeft, mappedBottom - mappedTop),
                         style = Stroke(width = 5f)
                     )
-                    drawContext.canvas.nativeCanvas.drawText(obj.label, mappedLeft, mappedTop - 10f, paint)
+                    drawContext.canvas.nativeCanvas.drawText(obj.label, mappedLeft, mappedTop - 10f, paintGreen)
                 }
+            }
+
+            detectedFaces.forEach { faceRect ->
+                val mappedLeft = canvasWidth - (faceRect.right * scale + offsetX)
+                val mappedTop = faceRect.top * scale + offsetY
+                val mappedRight = canvasWidth - (faceRect.left * scale + offsetX)
+                val mappedBottom = faceRect.bottom * scale + offsetY
+
+                drawRect(
+                    color = Color.Red,
+                    topLeft = Offset(mappedLeft, mappedTop),
+                    size = Size(mappedRight - mappedLeft, mappedBottom - mappedTop),
+                    style = Stroke(width = 5f)
+                )
+                drawContext.canvas.nativeCanvas.drawText("Face", mappedLeft, mappedTop - 10f, paintRed)
             }
         }
     }

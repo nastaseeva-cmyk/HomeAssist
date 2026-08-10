@@ -2,6 +2,7 @@ import os
 import time
 import json
 import urllib.request
+import re  # Necesită importarea expresiilor regulate
 from pathlib import Path
 from wsgiref.simple_server import make_server
 from llm import load_model, process_image
@@ -28,7 +29,6 @@ def application(environ, start_response):
         start_response("400 Bad Request", [("Content-Type", "application/json")])
         return [json.dumps({"error": "Missing image data"}).encode("utf-8")]
 
-
     image_bytes = environ["wsgi.input"].read(content_length)
     content_type = environ.get("CONTENT_TYPE", "image/jpeg")
     if "png" in content_type:
@@ -42,34 +42,41 @@ def application(environ, start_response):
     filename.write_bytes(image_bytes)
 
     response_payload = {"status": "saved", "file": str(filename)}
-    inference_result_str = process_image(model, str(filename))
+    
 
-    print(f"Inference result: {inference_result_str}")
+    inference_result_str = process_image(model, str(filename))
+    print(f"Inference result raw: {inference_result_str}")
+
+
+    json_match = re.search(r'\{.*\}', inference_result_str, re.DOTALL)
+    if json_match:
+        clean_json_str = json_match.group(0)
+    else:
+        clean_json_str = inference_result_str
 
     try:
-        inference_json = json.loads(inference_result_str)
+        raw_json = json.loads(clean_json_str)
+        inference_json = {k.upper(): v for k, v in raw_json.items()}
     except json.JSONDecodeError:
-        print("Eroare: LLM-ul nu a returnat un JSON valid.")
+        print("Error parsing JSON response.")
         inference_json = {}
+
 
     audio_url = None
 
+    text_to_speak = "Status " + inference_json.get("STATUS", "Error getting status!")
+    text_to_speak += ". Resident is in the picture: " + inference_json.get("RESIDENT_IN_PICTURE", "Error getting resident info!") 
 
-
-    # if inference_json.get("status") == "OK":
-    text_to_speak = "Status " + inference_json.get("status", "Error getting status!")
-    text_to_speak += "Resident is in the picture: " + inference_json.get("resident_in_picture", "Error getting resident info!") 
-    text_to_speak += "Description: " + inference_json.get("description", "Error getting the description!")
-
-    if  inference_json.get("resident_in_picture", "Error getting resident info!") == "YES":
-        text_to_speak = inference_json.get("greeting", "Error getting the greeting!")
+    if inference_json.get("RESIDENT_IN_PICTURE", "") == "YES" and inference_json.get("MULTIPLE_PEOPLE", "") == "NO":
+        text_to_speak = inference_json.get("GREETING", "Error getting the greeting!")
+    elif inference_json.get("MULTIPLE_PEOPLE", "") == "YES":
+        text_to_speak = inference_json.get("Văd că sunteți mai mulți. Vă rog sa va asigurati că rezidentul este in casă si este în siguranță.")
+    else:
+        text_to_speak = "Nu ești rezidentul! Te ignor."
         
-    # text_to_speak = "Totul este în regulă bosulică? Ce poate eu să face pentru tine? Ha! Fraierică! Glumeam, totul e ok, nu te speria!"
-    
     tts_req_url = "http://127.0.0.1:9000/tts"
     tts_payload = json.dumps({"text": text_to_speak}).encode("utf-8")
     req = urllib.request.Request(tts_req_url, data=tts_payload, headers={'Content-Type': 'application/json'})
-
     
     try:
         with urllib.request.urlopen(req) as response:
@@ -88,18 +95,16 @@ def application(environ, start_response):
     response_payload = {
         "status": "saved", 
         "file": str(filename),
-        "inference": inference_result_str 
+        "inference": json.dumps(inference_json) 
     }
+
+    print(response_payload)
     
     if audio_url:
         response_payload["audio_url"] = audio_url
 
-
-
-
     start_response("200 OK", [("Content-Type", "application/json")])
     return [json.dumps(response_payload).encode("utf-8")]
-
 
 if __name__ == "__main__":
     host = "0.0.0.0"

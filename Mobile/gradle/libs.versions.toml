@@ -1,6 +1,7 @@
 [versions]
 agp = "9.3.1"
 camerax = "1.6.1"
+faceDetection = "16.1.7"
 mlkit-custom = "17.0.2"
 coreKtx = "1.19.0"
 junit = "4.13.2"
@@ -14,6 +15,7 @@ tflite = "0.4.4"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
+face-detection = { module = "com.google.mlkit:face-detection", version.ref = "faceDetection" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
 androidx-espresso-core = { group = "androidx.test.espresso", name = "espresso-core", version.ref = "espressoCore" }

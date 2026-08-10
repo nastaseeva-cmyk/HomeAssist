@@ -27,9 +27,10 @@ fun StylizedTrackingFaceBackground(
     lookOffset: Offset,
     isPersonDetected: Boolean,
     personScale: Float,
-    isTalking: Boolean
+    isTalking: Boolean,
+    isCooling: Boolean
 ) {
-    val faceColor = Color.Cyan
+    val faceColor = if (isCooling) Color.Gray else Color.Cyan
     val pupilColor = Color.Red
     val strokeWidth = 24f
 

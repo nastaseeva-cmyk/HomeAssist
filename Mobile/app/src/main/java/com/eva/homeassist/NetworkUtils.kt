@@ -11,7 +11,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 
 const val BACKEND_URL = "http://192.168.64.145:7000/detection"
-const val COOLDOWN_TIME_MS = 2 * 60 * 1000L // 5 minute
+const val COOLDOWN_TIME_MS = 1 * 60 * 1000L
 
 class DetectionUploadState {
     var isPresent: Boolean = false
