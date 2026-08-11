@@ -17,12 +17,17 @@ The Proof of Concept (POC) backend is designed to run on a laptop equipped with 
 ## Architecture & Repository Structure
 This is a mono-repo containing all required components:
 
-* **`ClientApp`**
-  A Kotlin application for Android devices. It executes an edge-level object detection model on real-time video to filter for relevant frames. Validated frames are transmitted to the Thinking endpoint for advanced, multimodal context analysis.
+* **`Mobile`**
+  Models: MLKit FaceDetection & efficientdet.tflite (person)
+  A Kotlin application for Android devices. 
+  Executes edge-level object detection models on real-time video to filter for relevant frames. 
+  Draws a dynamic basic friendly face - eyes are following face or person, mouth simulate speaking.
+  Validated frames are transmitted to the Thinking endpoint for advanced, multimodal context analysis. 
+  Thinking endpoint analyse the picture and decide - either calls TTS and retrieves url of resulting audio or just replies conclusions.
 * **`Speaking`**
   Port: 9000
   Model: k2-fsa/OmniVoice
-  A Python microservice running a Text-to-Speech (TTS) model. It exposes a REST endpoint that receives text strings, generates synthesized audio, and streams it back to the client for immediate playback.
+  A Python microservice running a Text-to-Speech (TTS) model. It exposes a REST endpoint that receives text strings, generates synthesized audio, and streams it back to the caller for immediate playback.
 * **`Thinking`**
   Port: 7000
   Model: lmstudio/gemma-4-E4B-it-Q4_K_M.gguf (quantized Google Gemma 4)

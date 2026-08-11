@@ -91,7 +91,7 @@ fun MainScreen() {
         val now = System.currentTimeMillis()
         if (cooldownExpiration > now) {
             isCooling = true
-            delay(cooldownExpiration - now)
+            delay((cooldownExpiration - now).milliseconds)
             isCooling = false
         } else {
             isCooling = false
