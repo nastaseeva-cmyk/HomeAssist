@@ -1,5 +1,9 @@
 import os
+from logger import get_logger
 from llm import load_model, process_image
+
+
+log = get_logger("thinking")
 
 model = load_model()
 

@@ -1,5 +1,9 @@
-from journal import write_conversation
+from logger import get_logger
+log = get_logger("thinking")
+
 from calls import tts
+from db import write_conversation
+
 
 def act(environ, filename, resident_in_picture, multiple_people, status, spoken_message):
 
@@ -40,7 +44,6 @@ def act(environ, filename, resident_in_picture, multiple_people, status, spoken_
             
         }
     
-
     # SITUATION: No danger detected, resident not in picture, or multiple people detected
     # ACTION: Return the inference results without generating TTS
     else:

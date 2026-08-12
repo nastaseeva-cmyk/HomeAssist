@@ -1,14 +1,23 @@
+from logger import get_logger
+log = get_logger("thinking")
+
 import os
 import time
 import json
-from pathlib import Path
+from db import init_db
 from cortex import act
+from pathlib import Path
+from dotenv import load_dotenv
 from wsgiref.simple_server import make_server
 from llm import load_model, process_image, parse_json_response
 
-IMAGE_DIR = Path(__file__).resolve().parent / "images"
+
+load_dotenv("config.env")
+
+IMAGE_DIR = Path(__file__).resolve().parent.parent / "SharedData/images"
 IMAGE_DIR.mkdir(parents=True, exist_ok=True)
 
+init_db()
 model = load_model()
 
 def application(environ, start_response):
@@ -22,6 +31,7 @@ def application(environ, start_response):
     try:
         content_length = int(environ.get("CONTENT_LENGTH", "0"))
     except ValueError:
+        log.error("Invalid CONTENT_LENGTH header")
         content_length = 0
 
     if content_length <= 0:
@@ -57,8 +67,9 @@ def application(environ, start_response):
     return [json.dumps(response_payload).encode("utf-8")]
 
 if __name__ == "__main__":
-    host = "0.0.0.0"
-    port = int(os.environ.get("PORT", "7000"))
-    print(f"Starting Thinking image endpoint on http://{host}:{port}/detection")
+    host = os.environ.get("THINKING_HOST", None)
+    port = int(os.environ.get("THINKING_PORT", None))
+
+    log.info(f"Starting Thinking image endpoint on http://{host}:{port}/detection")
     server = make_server(host, port, application)
     server.serve_forever()

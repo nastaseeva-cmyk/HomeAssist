@@ -1,5 +1,6 @@
 import time
-from journal import get_conversations
+from db import get_conversations
+
 
 def get_image_prompt():
    return f"""

@@ -1,4 +1,0 @@
-
-
-
-Processing images/capture_1786285125150.jpg: {"RESIDENT_IN_PICTURE": "YES", "MULTIPLE_PEOPLE": "YES", "STATUS": "DANGER", "GREETING": "Bună ziua! Sper să vă merge bine.", "DESCRIPTION": "There are multiple people detected in the camera image. The resident appears to be present, but there is also at least one other person visible. Crucially, one person is lying on the floor near the left side of the image, which indicates a potential danger situation. Therefore, the status is set to DANGER."}

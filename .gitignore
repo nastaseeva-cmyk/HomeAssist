@@ -4,6 +4,8 @@
 *.jpeg
 *.jpg
 *.png
+*.log
+*.env
 
 # Generated media files
 Hearing/audio/*

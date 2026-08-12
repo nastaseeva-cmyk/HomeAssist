@@ -1,19 +1,20 @@
+from logger import get_logger
+log = get_logger("thinking")
+
 import re
+import os
 import json
 import base64
+from pathlib import Path
 from llama_cpp import Llama
 from prompts import get_image_prompt  
 from llama_cpp.llama_chat_format import Gemma4ChatHandler 
 
 
-model_path = "/etc/models/lmstudio-community/gemma-4-E4B-it-GGUF/gemma-4-E4B-it-Q4_K_M.gguf"
-mmproj_path = "/etc/models/lmstudio-community/gemma-4-E4B-it-GGUF/mmproj-gemma-4-E4B-it-BF16.gguf"
-
-chat_handler = Gemma4ChatHandler(clip_model_path=mmproj_path)
-
 def load_model():
+    chat_handler = Gemma4ChatHandler(clip_model_path=os.environ.get("LLM_MMPROJ_PATH", None))
     return Llama(
-        model_path=model_path,
+        model_path=os.environ.get("LLM_MODEL_PATH", None),
         chat_handler=chat_handler,
         n_gpu_layers=-1, 
         n_ctx=4096,
@@ -26,7 +27,7 @@ def encode_image(image_path):
 
 def process_image(llm, image_path):
     base64_image = encode_image(image_path)
-    resident_base64_image = encode_image("subject/virgil.jpeg")
+    resident_base64_image = encode_image(Path(__file__).resolve().parent.parent / os.environ.get("RESIDENT_IMAGE_PICTURE", None))
 
     response = llm.create_chat_completion(
         messages=[
@@ -48,7 +49,7 @@ def process_image(llm, image_path):
 
 # Initially tested json enforcement but it worked slow and results were halucinated (strange enough...). Reverted to old-school regex extraction and json parsing.
 def parse_json_response(response_str):
-    print(f"Inference result raw: {response_str}") 
+    log.info(f"Inference result raw: {response_str}") 
 
     json_match = re.search(r'\{.*\}', response_str, re.DOTALL)
     if json_match:
