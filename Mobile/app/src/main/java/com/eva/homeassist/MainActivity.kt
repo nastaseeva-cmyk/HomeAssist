@@ -38,6 +38,7 @@ import com.eva.homeassist.ui.theme.HomeAssistTheme
 import android.view.WindowManager
 import androidx.compose.runtime.mutableLongStateOf
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {

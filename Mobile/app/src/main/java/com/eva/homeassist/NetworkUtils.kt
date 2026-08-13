@@ -10,7 +10,7 @@ import java.io.ByteArrayOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 
-const val BACKEND_URL = "http://192.168.64.145:7000/detection"
+
 const val COOLDOWN_TIME_MS = 1 * 60 * 1000L
 
 class DetectionUploadState {
@@ -26,7 +26,8 @@ fun uploadImageToBackend(bitmap: Bitmap, onResult: (String, String?) -> Unit) {
             bitmap.compress(Bitmap.CompressFormat.JPEG, 85, stream)
             val byteArray = stream.toByteArray()
 
-            val url = URL(BACKEND_URL)
+            val url = URL(BuildConfig.DETECTION_URL)
+
             val connection = url.openConnection() as HttpURLConnection
             connection.requestMethod = "POST"
             connection.setRequestProperty("Content-Type", "image/jpeg")
