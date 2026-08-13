@@ -13,7 +13,6 @@ def act(environ, filename, resident_in_picture, multiple_people, status, spoken_
         text_to_speak = spoken_message
         write_conversation(text_to_speak)
         audio_url = tts(environ, text_to_speak)
-
         return {
             "status": "saved", 
             "file": str(filename),
@@ -25,7 +24,6 @@ def act(environ, filename, resident_in_picture, multiple_people, status, spoken_
             },
             "audio_url": audio_url
         }
-
 
     # SITUATION: Danger detected (status is "danger")
     # ACTION: Generate a conversation with corresponding TTS and return the audio URL along with the inference results

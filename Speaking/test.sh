@@ -1,1 +1,0 @@
-curl -X POST http://127.0.0.1:9000/tts   -H "Content-Type: application/json"   -d '{"text":"This stuff is super scary... This weird shit is instantly mimicking my voice. What the fuck else is there to say? Holy fucking shit..."}'

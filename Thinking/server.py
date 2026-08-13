@@ -1,17 +1,16 @@
-from logger import get_logger
-log = get_logger("thinking")
-
 import os
 import time
 import json
 from db import init_db
 from cortex import act
 from pathlib import Path
+from logger import get_logger
 from dotenv import load_dotenv
 from wsgiref.simple_server import make_server
 from llm import load_model, process_image, parse_json_response
 
 
+log = get_logger("thinking")
 load_dotenv("config.env")
 
 IMAGE_DIR = Path(__file__).resolve().parent.parent / "SharedData/images"
@@ -25,6 +24,7 @@ def application(environ, start_response):
     method = environ.get("REQUEST_METHOD", "")
 
     if path != "/detection" or method != "POST":
+        log.error(f"404 Not Found: Endpoint not found: {path}")
         start_response("404 Not Found", [("Content-Type", "application/json")])
         return [json.dumps({"error": "Endpoint not found"}).encode("utf-8")]    
     
@@ -35,6 +35,7 @@ def application(environ, start_response):
         content_length = 0
 
     if content_length <= 0:
+        log.error(f"400 Bad Request: Missing image data: {content_length}")
         start_response("400 Bad Request", [("Content-Type", "application/json")])
         return [json.dumps({"error": "Missing image data"}).encode("utf-8")]
 
@@ -69,6 +70,10 @@ def application(environ, start_response):
 if __name__ == "__main__":
     host = os.environ.get("THINKING_HOST", None)
     port = int(os.environ.get("THINKING_PORT", None))
+
+    if not host or not port:
+        log.error("THINKING_HOST and THINKING_PORT must be set in config.env")
+        exit(1)
 
     log.info(f"Starting Thinking image endpoint on http://{host}:{port}/detection")
     server = make_server(host, port, application)

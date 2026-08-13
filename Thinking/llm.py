@@ -1,20 +1,27 @@
-from logger import get_logger
-log = get_logger("thinking")
-
 import re
 import os
 import json
 import base64
 from pathlib import Path
 from llama_cpp import Llama
+from logger import get_logger
 from prompts import get_image_prompt  
 from llama_cpp.llama_chat_format import Gemma4ChatHandler 
 
 
+log = get_logger("thinking")
+
 def load_model():
-    chat_handler = Gemma4ChatHandler(clip_model_path=os.environ.get("LLM_MMPROJ_PATH", None))
+    clip_model_path = os.environ.get("LLM_MMPROJ_PATH", None)
+    model_path = os.environ.get("LLM_MODEL_PATH", None)
+
+    if not clip_model_path or not model_path:
+        log.error("LLM model paths are not set in environment variables.")
+        raise ValueError("LLM model paths are not set in environment variables.")
+
+    chat_handler = Gemma4ChatHandler(clip_model_path=clip_model_path) 
     return Llama(
-        model_path=os.environ.get("LLM_MODEL_PATH", None),
+        model_path=model_path,
         chat_handler=chat_handler,
         n_gpu_layers=-1, 
         n_ctx=4096,
@@ -27,7 +34,13 @@ def encode_image(image_path):
 
 def process_image(llm, image_path):
     base64_image = encode_image(image_path)
-    resident_base64_image = encode_image(Path(__file__).resolve().parent.parent / os.environ.get("RESIDENT_IMAGE_PICTURE", None))
+
+    resident_image_path = os.environ.get("RESIDENT_IMAGE_PICTURE", None)
+    if not resident_image_path:
+        log.error("Resident image path is not set in environment variables.")
+        raise ValueError("Resident image path is not set in environment variables.")
+    
+    resident_base64_image = encode_image(Path(__file__).resolve().parent.parent / resident_image_path)
 
     response = llm.create_chat_completion(
         messages=[
@@ -61,7 +74,7 @@ def parse_json_response(response_str):
         raw_json = json.loads(clean_json_str)
         inference_json = {k: v for k, v in raw_json.items()}
     except json.JSONDecodeError:
-        print("Error parsing JSON response.")
+        log.error(f"Error parsing JSON response")
         inference_json = {}
 
 
