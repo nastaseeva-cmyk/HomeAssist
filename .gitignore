@@ -8,9 +8,11 @@
 *.env
 
 # Generated media files
-Hearing/audio/*
-Speaking/audio/*
-Thinking/images/*
+SharedData/db/*
+SharedData/audio/*
+SharedData/images/*
+SharedData/logs/*
+SharedData/resident/*
 
 # Android / IDE artifacts
 *.iml
@@ -21,3 +23,6 @@ TabletApp/.gradle/
 TabletApp/build/
 TabletApp/app/build/
 TabletApp/local.properties
+
+# Mac
+.DS_Store
