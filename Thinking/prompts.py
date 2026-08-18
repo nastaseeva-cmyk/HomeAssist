@@ -4,7 +4,7 @@ from db import get_conversations
 
 
 def get_image_prompt():
-   resident_language = os.environ.get("THINKING_HOST", "English")
+   resident_language = os.environ.get("RESIDENT_LANGUAGE", "English")
 
    return f"""
 You are an AI assistant analyzing images for a continuous home monitoring system. 

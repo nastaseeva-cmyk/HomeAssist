@@ -10,7 +10,7 @@ services:
     volumes:
       - /etc/models:/etc/models
       - ./SharedData:/app/SharedData
-      - ./Thinking/config.env:/app/Thinking/config.env
+      - ./Thinking/config.env:/app/config.env
     deploy:
       resources:
         reservations:
@@ -30,7 +30,7 @@ services:
     volumes:
       - /etc/models:/etc/models
       - ./SharedData:/app/SharedData
-      - ./Speaking/config.env:/app/Speaking/config.env
+      - ./Speaking/config.env:/app/config.env
     deploy:
       resources:
         reservations:

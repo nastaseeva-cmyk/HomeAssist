@@ -13,8 +13,8 @@ def get_db_path():
         log.error("THINKING_DB environment variable is not set.")
         raise ValueError("THINKING_DB environment variable is not set.")
 
-    db_folder = Path(__file__).resolve().parent.parent / "SharedData/db"
-    db_folder.mkdir(parents=True, exist_ok=True)
+    full_path = Path(__file__).resolve().parent.parent / db_path
+    full_path.parent.mkdir(parents=True, exist_ok=True)
 
     return Path(__file__).resolve().parent.parent / db_path
 

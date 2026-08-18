@@ -71,41 +71,10 @@ RESIDENT_LANGUAGE = "en"
 
 ## Build & Run
 
-To ensure the containers can communicate with each other (e.g., Thinking reaching Speaking via the `TTS_HOST` name), create a dedicated Docker network first.
+To ensure the containers can communicate with each other (e.g., Thinking reaching Speaking via the `TTS_HOST` name) a dedicated Docker network will be used.
 
-Run these commands from the root directory of the repository (`HomeAssist`):
-
-### 1. Create Docker Network
+### Run docker compose from the root directory of the repository (`HomeAssist`)
 ```bash
-docker network create homeassist-net
+docker compose up --build
 ```
-
-### 2. Thinking Service
-```bash
-docker build -t homeassist-thinking ./Thinking
-
-docker run --name thinking-service \
-  --network homeassist-net \
-  --gpus all \
-  -p 7000:7000 \
-  -v /etc/models:/etc/models \
-  -v $(pwd)/SharedData:/app/SharedData \
-  -v $(pwd)/Thinking/config.env:/app/Thinking/config.env \
-  -d homeassist-thinking
-```
-
-### 3. Speaking Service
-```bash
-docker build -t homeassist-speaking ./Speaking
-
-docker run --name speaking-service \
-  --network homeassist-net \
-  --gpus all \
-  -p 9001:9001 \
-  -v /etc/models:/etc/models \
-  -v $(pwd)/SharedData:/app/SharedData \
-  -v $(pwd)/Speaking/config.env:/app/Speaking/config.env \
-  -d homeassist-speaking
-```
-
 At this point, the application backend should be up and running locally. You can install the mobile app and start testing.
