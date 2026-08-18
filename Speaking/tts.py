@@ -23,8 +23,8 @@ def load_model():
 
     return OmniVoice.from_pretrained(
         model_path,
-        device_map = "cuda:0",
-        dtype = torch.float16,
+        device_map = "auto",
+        # dtype = torch.float16,
     )
 
 def generate_speech(text, model, lang):

@@ -96,7 +96,7 @@ if __name__ == "__main__":
         log.error("SPEAKING_HOST and SPEAKING_PORT must be set in config.env")
         exit(1)
 
-    log.info(f"Starting Speaking TTS endpoint on http://{host}:{port}/speaking")
+    log.info(f"Starting Speaking TTS endpoint on http://{host}:{port}/tts")
 
     server = make_server(host, port, application)
     server.serve_forever()
