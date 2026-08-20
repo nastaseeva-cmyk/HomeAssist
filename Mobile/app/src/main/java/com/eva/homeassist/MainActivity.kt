@@ -28,7 +28,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.launch
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
@@ -41,6 +40,8 @@ import android.view.WindowManager
 import androidx.compose.runtime.mutableLongStateOf
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
+import androidx.compose.foundation.layout.systemBarsPadding
+import androidx.compose.ui.Alignment
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -135,7 +136,12 @@ fun MainScreen() {
         label = "pupilDilationAnimation"
     )
 
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF1E1E1E))) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color(0xFF1E1E1E))
+            .systemBarsPadding()
+    ) {
 
         StylizedTrackingFaceBackground(
             modifier = Modifier.fillMaxSize(),
@@ -149,9 +155,9 @@ fun MainScreen() {
 
         Box(
             modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(top = 48.dp, end = 16.dp)
-                .size(120.dp, 160.dp)
+                .align(Alignment.TopCenter)
+                .padding(top = 0.dp, end = 0.dp, bottom = 100.dp)
+                .size(80.dp, 80.dp)
                 .clip(RoundedCornerShape(12.dp))
                 .background(Color.Black)
         ) {

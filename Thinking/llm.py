@@ -23,6 +23,7 @@ def load_model():
     return Llama(
         model_path=model_path,
         chat_handler=chat_handler,
+        # n_gpu_layers=25, 
         n_gpu_layers=-1, 
         n_ctx=4096,
         verbose=False

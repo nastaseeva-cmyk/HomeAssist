@@ -1,30 +1,26 @@
 import os
-import torch
+import time
 import hashlib
 import soundfile as sf
 from pathlib import Path
 from logger import get_logger
 from omnivoice import OmniVoice
-from typing import Optional, Union
-
 
 log = get_logger("speaking")
 
 AUDIO_DIR = Path(__file__).resolve().parent.parent / "SharedData/audio"
 AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
-VOICES_DIR = Path(__file__).resolve().parent.parent / "SharedData/voices"
-VOICES_DIR.mkdir(parents=True, exist_ok=True)
-
 def load_model():
     model_path = os.environ.get("TTS_MODEL_PATH", None)
     if not model_path:
-        log.error(f"TTS model not found: {model_path}")
+        log.error("TTS model path not found in environment variables.")
+        raise ValueError("TTS_MODEL_PATH is missing")
 
+    log.info(f"Loading OmniVoice model from {model_path}")
     return OmniVoice.from_pretrained(
         model_path,
-        device_map = "auto",
-        # dtype = torch.float16,
+        device_map="auto",
     )
 
 def generate_speech(text, model, lang):
@@ -35,28 +31,18 @@ def generate_speech(text, model, lang):
     token = hashlib.sha1(cleaned_text.encode("utf-8")).hexdigest()
     output_path = AUDIO_DIR / f"{token}.wav"
 
+    start_time = time.time()
+
     try:
-        with open(f"{VOICES_DIR}/{lang}.txt", "r") as f:
-            ref_text = f.readlines()
-    except Exception as e:
-        ref_text = None
-        log.error(f"Referrence text file not found {e}")
-
-    if os.path.exists(f"{VOICES_DIR}/{lang}.wav"):
-        ref_audio = f"{VOICES_DIR}/{lang}.wav"
-    else:
-        ref_audio = None
-        log.error(f"Referrence audio file not found {lang}")
-
-    if ref_text and ref_audio:
-        audio = model.generate(
-            text = cleaned_text,
-            ref_audio = ref_audio,
-            ref_text = ref_text
-        )
-        log.info(f"Generating speech for text: {cleaned_text} -> {output_path}")
+        audio = model.generate(text=cleaned_text)
+        
         sf.write(str(output_path), audio[0], 24000)
-    else:
-        output_path = "error"
+
+        elapsed_time = time.time() - start_time        
+        log.info(f"Generated speech -> {output_path} (tts_time: {elapsed_time:.2f}s)")        
+    
+    except Exception as e:
+        log.error(f"Error generating speech: {e}")
+        return "error"
 
     return str(output_path)

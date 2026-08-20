@@ -41,6 +41,26 @@ services:
     networks:
       - homeassist-net
 
+  hearing-service:
+    build:
+      context: ./Hearing
+    container_name: hearing-service
+    ports:
+      - "8000:8000"
+    volumes:
+      - /etc/models:/etc/models
+      - ./SharedData:/app/SharedData
+      - ./Hearing/config.env:/app/config.env
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    networks:
+      - homeassist-net
+
 networks:
   homeassist-net:
     name: homeassist-net

@@ -1,3 +1,4 @@
+import os
 import base64
 import tempfile
 from pathlib import Path
@@ -8,8 +9,12 @@ from faster_whisper import WhisperModel
 
 log = get_logger("hearing")
 
-def load_model(model_name: str = "large-v3"):
-    return WhisperModel(model_name, device="cuda", compute_type="float16")
+def load_model():
+    return WhisperModel(
+        os.environ.get("STT_MODEL_PATH", None), 
+        device="auto",
+        compute_type="int8_float16"
+    )
 
 def extract_audio_bytes(payload=None, body=b"", content_type: str = "application/json") -> bytes:
     if payload is not None:

@@ -70,8 +70,11 @@ def application(environ, start_response):
     file_path = AUDIO_DIR / f"stt_audio_{int(time.time() * 1000)}.{extension}"
     file_path.write_bytes(audio_bytes)
 
+    start_time = time.time()
     text, lang = transcribe_audio(audio_bytes, model=model)
-    print("RESPONSUL->", cortex(environ, lang, text))
+    elapsed_time = time.time() - start_time
+    log.info(f"stt_time: {elapsed_time:.2f}s / {lang}:{text}")
+    cortex(environ, lang, text)
 
     start_response("200 OK", [("Content-Type", "application/json")])
     return [

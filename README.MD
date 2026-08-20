@@ -18,9 +18,12 @@ The Proof of Concept (POC) backend is designed to run on a laptop equipped with 
 This is a mono-repo containing all required components:
 
 * **`Mobile`**
-  Models: MLKit FaceDetection & efficientdet.tflite (person detection)
-  A Kotlin application for Android devices. 
+  Models: 
+  - MLKit FaceDetection & efficientdet.tflite (person detection)
+  - Silero VAD for voice detection using microphone
+  Kotlin application for Android devices. 
   Executes edge-level object detection models on real-time video to filter for relevant frames. 
+  Detects voice and sends it to Hearing service for TTS.
   Draws a dynamic basic friendly face - eyes are following the face or person, mouth simulates speaking.
   Validated frames are transmitted to the Thinking endpoint for advanced, multimodal context analysis. 
   The Thinking endpoint analyzes the picture and decides: it either calls the TTS service to retrieve the generated audio URL, or directly replies with its analytical conclusions.
@@ -32,13 +35,13 @@ This is a mono-repo containing all required components:
   
 * **`Thinking`**
   Port: 7000
-  Model: lmstudio/gemma-4-E4B-it-Q4_K_M.gguf (quantized Google Gemma 4)
+  Model: unsloth/gemma-4-E4B-it-GGUF/gemma-4-E4B-it-Q3_K_S.gguf (quantized Google Gemma 4)
   A Python microservice running a multimodal LLM, acting as the system's central processing unit. It exposes a REST endpoint called by the peripheral services (Hearing, ClientApp). It synthesizes context, triggers alerts, and commands the Speaking service.
   
-* **`Hearing` (Work in Progress)** 
+* **`Hearing`** 
   Port: 8000
   Model: openai/whisper-large-v3 (via fast-whisper library)
-  A Python microservice running a Speech-to-Text (STT) model. It ingests an audio stream via WebSocket and outputs transcribed text and language identification back to the Thinking service.
+  A Python microservice running a Speech-to-Text (STT) model. Gets voice audio from Mobile and calls Thinking service with detected language and text for further processing.
 
 ---
 
@@ -65,6 +68,14 @@ SPEAKING_HOST = "0.0.0.0"
 SPEAKING_PORT = 9001
 TTS_MODEL_PATH = "/etc/models/omnivoice"
 RESIDENT_LANGUAGE = "en"
+```
+
+**`Hearing/config.env`**
+```env
+HEARING_HOST = "0.0.0.0"
+HEARING_PORT = 8000
+CORTEX_STT_HOST = "thinking-service"
+CORTEX_STT_PORT = 7000
 ```
 
 ---

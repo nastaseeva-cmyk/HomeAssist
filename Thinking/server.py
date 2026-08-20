@@ -47,7 +47,10 @@ def detectionReq(environ, start_response):
     response_payload = {"status": "saved", "file": str(filename)}
 
     # Process the image with the LLM
+    start_time = time.time()
     inference_result_str = process_image(model, str(filename))
+    elapsed_time = time.time() - start_time        
+    log.info(f"llm_time: {elapsed_time:.2f}s")
 
     # Process inference result
     resident_in_picture, multiple_people, status, greeting = parse_json_response(inference_result_str)
