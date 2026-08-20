@@ -1,8 +1,19 @@
 import os
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
+import time
 import json
+from pathlib import Path
+from calls import cortex
+from logger import get_logger
+from dotenv import load_dotenv
 from wsgiref.simple_server import make_server
 from stt import load_model, extract_audio_bytes, transcribe_audio
+
+
+log = get_logger("hearing")
+load_dotenv("config.env")
+
+AUDIO_DIR = Path(__file__).resolve().parent.parent / "SharedData/audio"
+AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
 model = load_model()
 
@@ -12,18 +23,19 @@ def application(environ, start_response):
     path = environ.get("PATH_INFO", "")
     method = environ.get("REQUEST_METHOD", "")
 
-
     if path != "/stt" or method != "POST":
+        log.error(f"404 Not Found: Endpoint not found: {path}")
         start_response("404 Not Found", [("Content-Type", "application/json")])
         return [json.dumps({"error": "Endpoint not found"}).encode("utf-8")]    
-
 
     try:
         content_length = int(environ.get("CONTENT_LENGTH", "0"))
     except ValueError:
+        log.error("Invalid CONTENT_LENGTH header")
         content_length = 0
 
     if content_length <= 0:
+        log.error(f"400 Bad Request: Missing image data: {content_length}")
         start_response("400 Bad Request", [("Content-Type", "application/json")])
         return [json.dumps({"error": "Missing request body"}).encode("utf-8")]
 
@@ -34,6 +46,7 @@ def application(environ, start_response):
         return [json.dumps({"error": "Missing request body"}).encode("utf-8")]
 
     content_type = environ.get("CONTENT_TYPE", "application/json").split(";")[0]
+
     payload = None
     if content_type == "application/json":
         try:
@@ -41,13 +54,24 @@ def application(environ, start_response):
         except (UnicodeDecodeError, json.JSONDecodeError):
             payload = None
 
+    if "wav" in content_type:
+        extension = "wav"
+    else:
+        log.error(f"Invalid content type: {content_type}")
+        extension = "bin"
+
     try:
         audio_bytes = extract_audio_bytes(payload=payload, body=request_body, content_type=content_type)
     except ValueError as exc:
+        log.error(f"Error extracting audio bytes: {exc}")
         start_response("400 Bad Request", [("Content-Type", "application/json")])
         return [json.dumps({"error": str(exc)}).encode("utf-8")]
 
-    text, language = transcribe_audio(audio_bytes, model=model)
+    file_path = AUDIO_DIR / f"stt_audio_{int(time.time() * 1000)}.{extension}"
+    file_path.write_bytes(audio_bytes)
+
+    text, lang = transcribe_audio(audio_bytes, model=model)
+    print("RESPONSUL->", cortex(environ, lang, text))
 
     start_response("200 OK", [("Content-Type", "application/json")])
     return [
@@ -55,7 +79,7 @@ def application(environ, start_response):
             {
                 "status": "ok",
                 "text": text,
-                "language": language,
+                "language": lang,
                 "model": "large-v3",
             }
         ).encode("utf-8")
@@ -63,8 +87,9 @@ def application(environ, start_response):
 
 
 if __name__ == "__main__":
-    host = "0.0.0.0"
-    port = 8000
-    print(f"Starting Hearing STT endpoint on http://{host}:{port}/stt")
+    host = os.environ.get("HEARING_HOST", None)
+    port = int(os.environ.get("HEARING_PORT", None))
+
+    log.info(f"Starting Hearing endpoint on http://{host}:{port}/detection")
     server = make_server(host, port, application)
     server.serve_forever()

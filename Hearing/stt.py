@@ -1,12 +1,12 @@
 import base64
 import tempfile
-from faster_whisper import WhisperModel
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Optional
+from logger import get_logger
+from faster_whisper import WhisperModel
 
-AUDIO_DIR = Path(__file__).resolve().parent / "audio"
-AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 
+log = get_logger("hearing")
 
 def load_model(model_name: str = "large-v3"):
     return WhisperModel(model_name, device="cuda", compute_type="float16")

@@ -26,6 +26,10 @@ android {
 
         val detectionUrl = localProperties.getProperty("DETECTION_URL") ?: "http://127.0.0.1:7000"
         buildConfigField("String", "DETECTION_URL", "\"$detectionUrl\"")
+
+        val sttUrl = localProperties.getProperty("STT_URL") ?: "http://127.0.0.1:8000"
+        buildConfigField("String", "STT_URL", "\"$sttUrl\"")
+
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -60,7 +64,9 @@ dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.tflite.vision)
+    implementation(libs.onnxruntime.android)
     implementation(libs.face.detection)
+    implementation("com.github.gkonovalov.android-vad:silero:2.0.10")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)

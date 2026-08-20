@@ -28,9 +28,11 @@ fun StylizedTrackingFaceBackground(
     isPersonDetected: Boolean,
     personScale: Float,
     isTalking: Boolean,
-    isCooling: Boolean
+    isCooling: Boolean,
+    isListening: Boolean
 ) {
     val faceColor = if (isCooling) Color.Gray else Color.Cyan
+    val earColor = if (isListening) Color.Red else Color.Gray
     val pupilColor = Color.Red
     val strokeWidth = 24f
 
@@ -71,6 +73,11 @@ fun StylizedTrackingFaceBackground(
         val eyeOffsetX = canvasWidth * 0.18f
         val eyeRadius = canvasWidth * 0.12f
 
+        val earY = faceTopY + faceHeight * 0.2f
+        val earOffsetX = canvasWidth * 0.40f
+        val earOffsetY = canvasHeight * 0.10f
+        val earRadius = canvasWidth * 0.05f
+
         val noseTopY = faceTopY + faceHeight * 0.4f
         val noseBottomY = faceTopY + faceHeight * 0.6f
 
@@ -90,6 +97,7 @@ fun StylizedTrackingFaceBackground(
         val actualShiftX = lookOffset.x * maxLookShift
         val actualShiftY = lookOffset.y * maxLookShift
 
+        // eyes
         drawCircle(
             color = faceColor,
             radius = eyeRadius,
@@ -102,7 +110,6 @@ fun StylizedTrackingFaceBackground(
             center = Offset(centerX + eyeOffsetX, eyeY),
             style = Stroke(width = strokeWidth)
         )
-
         drawCircle(
             color = eyeColor,
             radius = pupilRadius,
@@ -114,6 +121,20 @@ fun StylizedTrackingFaceBackground(
             center = Offset(centerX + eyeOffsetX + actualShiftX, eyeY + actualShiftY)
         )
 
+        // ears
+        drawCircle(
+            color = earColor,
+            radius = earRadius,
+            center = Offset(centerX - earOffsetX, earY + earOffsetY)
+        )
+        drawCircle(
+            color = earColor,
+            radius = earRadius,
+            center = Offset(centerX + earOffsetX, earY + earOffsetY)
+        )
+
+
+        // nose
         drawLine(
             color = faceColor,
             start = Offset(centerX, noseTopY),
@@ -121,6 +142,7 @@ fun StylizedTrackingFaceBackground(
             strokeWidth = strokeWidth
         )
 
+        // mouth
         val maxMouthHeight = canvasWidth * 0.15f
         val mouthHeight = strokeWidth + (maxMouthHeight * currentMouthOpen)
 

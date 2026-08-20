@@ -25,7 +25,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,18 +60,23 @@ fun MainScreen() {
     val context = LocalContext.current
     var hasCameraPermission by remember {
         mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
+            ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED &&
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED
         )
     }
 
     val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission(),
-        onResult = { granted -> hasCameraPermission = granted }
+        contract = ActivityResultContracts.RequestMultiplePermissions(),
+        onResult = { permissions ->
+            hasCameraPermission = permissions.values.all { it }
+        }
     )
 
     LaunchedEffect(Unit) {
         if (!hasCameraPermission) {
-            permissionLauncher.launch(Manifest.permission.CAMERA)
+            permissionLauncher.launch(
+                arrayOf(Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO)
+            )
         }
     }
 
@@ -78,9 +85,32 @@ fun MainScreen() {
     var rawPersonScale by remember { mutableFloatStateOf(0f) }
     var aiMessage by remember { mutableStateOf("") }
     var isTalking by remember { mutableStateOf(false) }
-
+    var isListening by remember { mutableStateOf(false) }
     var cooldownExpiration by remember { mutableLongStateOf(0L) }
     var isCooling by remember { mutableStateOf(false) }
+
+    val sttClient = remember { SttClient(BuildConfig.STT_URL) }
+    val voiceRecorder = remember { VoiceRecorder(context) }
+    val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(hasCameraPermission) {
+        if (hasCameraPermission) {
+            voiceRecorder.startListening(
+                onSpeechStart = {
+                    isListening = true
+                },
+                onSpeechEnd = { chunk ->
+                    isListening = false
+                    coroutineScope.launch {
+                        val text = sttClient.transcribeAudio(chunk)
+                        if (text != null && text.isNotBlank()) {
+                            aiMessage = "You said: $text"
+                        }
+                    }
+                }
+            )
+        }
+    }
 
     val animatedLookOffset by animateOffsetAsState(
         targetValue = rawLookOffset,
@@ -113,7 +143,8 @@ fun MainScreen() {
             isPersonDetected = isPersonDetected,
             personScale = animatedPersonScale,
             isTalking = isTalking,
-            isCooling = isCooling
+            isCooling = isCooling,
+            isListening = isListening
         )
 
         Box(
