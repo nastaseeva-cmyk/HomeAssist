@@ -18,9 +18,7 @@ The Proof of Concept (POC) backend is designed to run on a laptop equipped with 
 This is a mono-repo containing all required components:
 
 * **`Mobile`**
-  Models: 
-  - MLKit FaceDetection & efficientdet.tflite (person detection)
-  - Silero VAD for voice detection using microphone
+  Models: MLKit FaceDetection + efficientdet.tflite (person detection) / Silero VAD for voice detection using microphone
   Kotlin application for Android devices. 
   Executes edge-level object detection models on real-time video to filter for relevant frames. 
   Detects voice and sends it to Hearing service for TTS.
