@@ -27,18 +27,15 @@ This is a mono-repo containing all required components:
   The Thinking endpoint analyzes the picture and decides: it either calls the TTS service to retrieve the generated audio URL, or directly replies with its analytical conclusions.
   
 * **`Speaking`**<br>
-  Port: 9001<br>
   Model: k2-fsa/OmniVoice<br>
   A Python microservice running a Text-to-Speech (TTS) model. It exposes a REST endpoint that receives text strings, generates synthesized audio, and streams it back to the caller for immediate playback.
   
 * **`Thinking`**<br>
-  Port: 7000<br>
   Model: unsloth/gemma-4-E4B-it-GGUF/gemma-4-E4B-it-Q3_K_S.gguf (quantized Google Gemma 4)<br>
   A Python microservice running a multimodal LLM, acting as the system's central processing unit. It exposes a REST endpoint called by the peripheral services (Hearing, ClientApp). It synthesizes context, triggers alerts, and commands the Speaking service.
   
 * **`Hearing`**<br>
-  Port: 8000<br>
-  Model: openai/whisper-large-v3 (via fast-whisper library)<br>
+  Model: fast-whisper/whisper-large-v3<br>
   A Python microservice running a Speech-to-Text (STT) model. Gets voice audio from Mobile and calls Thinking service with detected language and text for further processing.
 
 ---
