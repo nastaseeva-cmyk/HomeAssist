@@ -4,7 +4,7 @@ from db import get_conversations
 
 
 def get_image_prompt():
-   resident_language = os.environ.get("RESIDENT_LANGUAGE", "English")
+   resident_language = os.environ.get("RESIDENT_LANGUAGE", "en")
 
    return f"""
 You are an AI assistant analyzing images for a continuous home monitoring system. 
@@ -30,7 +30,7 @@ Instructions:
    - CAUTION: If ANY person is lying on the floor, collapsed, or appears incapacitated, immediately set "status": "danger".
    - If all people are upright and engaged in normal, safe activities, set "status": "ok".
 4. Description: In the "short_description" field, explicitly state how many people are present, if the resident is among them, describe their posture, and explain why you chose the specific status. 
-5. Spoken Message: In the "spoken_message" field, generate a natural, conversational response in {resident_language}. 
+5. Spoken Message: In the "spoken_message" field, generate a natural, conversational response in '{resident_language}' language. 
    - Read the conversation history of today: '{get_conversations()}'.
    - CRITICAL: DO NOT repeat greetings (e.g., "Bună", "Salut") if you have already greeted the person recently in the history.
    - If a greeting is no longer appropriate, make a friendly, context-aware observation about what they are doing in the image, or ask a casual question.

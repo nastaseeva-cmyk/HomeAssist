@@ -5,14 +5,14 @@ from db import write_conversation
 
 log = get_logger("thinking")
 
-def act(environ, filename, resident_in_picture, multiple_people, status, spoken_message):
+def act(client_host, filename, resident_in_picture, multiple_people, status, spoken_message):
 
     # SITUATION: Resident is in the picture, status is "ok", and there is only one person detected
     # ACTION: Generate a conversation with corresponding TTS and return the audio URL along with the inference results
     if resident_in_picture == "yes" and multiple_people == "no" and status == "ok":
         text_to_speak = spoken_message
         write_conversation(text_to_speak)
-        audio_url = tts(environ, text_to_speak)
+        audio_url = tts(client_host, text_to_speak)
 
         return {
             "status": "saved", 
@@ -32,7 +32,7 @@ def act(environ, filename, resident_in_picture, multiple_people, status, spoken_
     elif status == "danger":
         text_to_speak = spoken_message
         write_conversation(text_to_speak)
-        audio_url = tts(environ, text_to_speak)
+        audio_url = tts(client_host, text_to_speak)
         return {
             "status": "saved", 
             "file": str(filename),

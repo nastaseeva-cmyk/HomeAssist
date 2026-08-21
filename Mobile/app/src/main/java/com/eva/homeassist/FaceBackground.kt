@@ -14,9 +14,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import kotlin.math.max
@@ -37,6 +35,7 @@ fun StylizedTrackingFaceBackground(
 ) {
     val faceColor = if (isCooling) Color.Gray else Color.Cyan
     val earColor = if (isListening) Color.Red else Color.Gray
+    val earColorMiddle = Color.Black
     val pupilColor = Color.Red
     val strokeWidth = 24f
 
@@ -79,7 +78,7 @@ fun StylizedTrackingFaceBackground(
 
         val earY = faceTopY + faceHeight * 0.2f
         val earOffsetX = canvasWidth * 0.40f
-        val earOffsetY = canvasHeight * 0.10f
+        val earOffsetY = canvasHeight * 0.05f
         val earRadius = canvasWidth * 0.05f
 
         val noseTopY = faceTopY + faceHeight * 0.4f
@@ -129,13 +128,24 @@ fun StylizedTrackingFaceBackground(
         drawCircle(
             color = earColor,
             radius = earRadius,
-            center = Offset(centerX - earOffsetX* 0.9f, earY + earOffsetY)
+            center = Offset(centerX - earOffsetX, earY + earOffsetY)
         )
         drawCircle(
             color = earColor,
             radius = earRadius,
-            center = Offset(centerX + earOffsetX* 0.9f, earY + earOffsetY)
+            center = Offset(centerX + earOffsetX, earY + earOffsetY)
         )
+        drawCircle(
+            color = earColorMiddle,
+            radius = earRadius*0.5f,
+            center = Offset(centerX - earOffsetX, earY + earOffsetY*1.1f)
+        )
+        drawCircle(
+            color = earColorMiddle,
+            radius = earRadius*0.5f,
+            center = Offset(centerX + earOffsetX, earY + earOffsetY*1.1f)
+        )
+
 
         drawCircle(
             color = earColor,
@@ -147,16 +157,26 @@ fun StylizedTrackingFaceBackground(
             radius = earRadius * 0.7f,
             center = Offset(centerX + earOffsetX, earY + earOffsetY + earRadius*1.4f)
         )
+        drawCircle(
+            color = earColorMiddle,
+            radius = earRadius * 0.3f,
+            center = Offset(centerX - earOffsetX, earY + earOffsetY*0.8f + earRadius*1.4f)
+        )
+        drawCircle(
+            color = earColorMiddle,
+            radius = earRadius * 0.3f,
+            center = Offset(centerX + earOffsetX, earY + earOffsetY*0.8f + earRadius*1.4f)
+        )
 
         drawCircle(
             color = earColor,
             radius = earRadius * 0.3f,
-            center = Offset(centerX - earOffsetX* 0.9f, earY + earOffsetY + earRadius * 2.3f)
+            center = Offset(centerX - earOffsetX, earY + earOffsetY + earRadius * 2.3f)
         )
         drawCircle(
             color = earColor,
             radius = earRadius * 0.3f,
-            center = Offset(centerX + earOffsetX* 0.9f, earY + earOffsetY + earRadius * 2.3f)
+            center = Offset(centerX + earOffsetX, earY + earOffsetY + earRadius * 2.3f)
         )
 
 
@@ -167,17 +187,6 @@ fun StylizedTrackingFaceBackground(
             end = Offset(centerX, noseBottomY),
             strokeWidth = strokeWidth
         )
-
-//        // mouth
-//        val maxMouthHeight = canvasWidth * 0.15f
-//        val mouthHeight = strokeWidth + (maxMouthHeight * currentMouthOpen)
-//
-//        drawRoundRect(
-//            color = faceColor,
-//            topLeft = Offset(centerX - mouthWidth / 2f, mouthY - strokeWidth / 2f),
-//            size = Size(mouthWidth, mouthHeight),
-//            cornerRadius = CornerRadius(strokeWidth / 2f, strokeWidth / 2f)
-//        )
 
 
         // mouth

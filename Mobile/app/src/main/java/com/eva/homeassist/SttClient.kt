@@ -3,8 +3,12 @@ package com.eva.homeassist
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URL
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.MultipartBody
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.util.concurrent.TimeUnit
 
 private fun addWavHeader(pcmData: ByteArray, sampleRate: Int): ByteArray {
     val header = ByteArray(44)
@@ -44,34 +48,39 @@ private fun addWavHeader(pcmData: ByteArray, sampleRate: Int): ByteArray {
     return header + pcmData
 }
 class SttClient(private val sttUrl: String) {
+    private val client = OkHttpClient.Builder()
+        .connectTimeout(15, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .build()
 
     suspend fun transcribeAudio(audioData: ByteArray): String? = withContext(Dispatchers.IO) {
         try {
-            val url = URL(sttUrl)
-            val connection = url.openConnection() as HttpURLConnection
-            connection.requestMethod = "POST"
-             connection.setRequestProperty("Content-Type", "audio/wav")
-            connection.setRequestProperty("Content-Length", audioData.size.toString())
-            connection.doOutput = true
-            connection.connectTimeout = 15000
-            connection.readTimeout = 30000
-
             val wavData = addWavHeader(audioData, 16000)
-            connection.setRequestProperty("Content-Length", wavData.size.toString())
 
-            connection.outputStream.use { os ->
-                os.write(wavData)
-            }
+            val requestBody = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart(
+                    "file",
+                    "audio.wav",
+                    wavData.toRequestBody("audio/wav".toMediaTypeOrNull())
+                )
+                .build()
 
-            if (connection.responseCode == 200) {
-                val responseBody = connection.inputStream.bufferedReader().use { it.readText() }
-                val json = JSONObject(responseBody)
-                
-                if (json.has("text")) {
-                    return@withContext json.getString("text")
+            val request = Request.Builder()
+                .url(sttUrl)
+                .post(requestBody)
+                .build()
+
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val responseBody = response.body?.string() ?: "{}"
+                    val json = JSONObject(responseBody)
+
+                    if (json.has("text")) {
+                        return@withContext json.getString("text")
+                    }
                 }
             }
-            connection.disconnect()
         } catch (e: Exception) {
             e.printStackTrace()
         }

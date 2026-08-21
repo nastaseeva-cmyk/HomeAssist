@@ -1,2 +1,5 @@
 faster-whisper
-python-dotenv
+python-dotenv==0.19.2
+uvicorn[standard]==0.30.1
+fastapi==0.111.0
+python-multipart==0.0.9

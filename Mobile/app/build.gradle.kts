@@ -67,6 +67,7 @@ dependencies {
     implementation(libs.onnxruntime.android)
     implementation(libs.face.detection)
     implementation("com.github.gkonovalov.android-vad:silero:2.0.10")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)

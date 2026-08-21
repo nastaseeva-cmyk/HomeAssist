@@ -7,8 +7,12 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
 import java.io.ByteArrayOutputStream
-import java.net.HttpURLConnection
-import java.net.URL
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.MultipartBody
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.RequestBody.Companion.toRequestBody
+import java.util.concurrent.TimeUnit
 
 
 const val COOLDOWN_TIME_MS = 1 * 60 * 1000L
@@ -26,37 +30,41 @@ fun uploadImageToBackend(bitmap: Bitmap, onResult: (String, String?) -> Unit) {
             bitmap.compress(Bitmap.CompressFormat.JPEG, 85, stream)
             val byteArray = stream.toByteArray()
 
-            val url = URL(BuildConfig.DETECTION_URL)
+            val client = OkHttpClient.Builder()
+                .connectTimeout(10, TimeUnit.SECONDS)
+                .readTimeout(120, TimeUnit.SECONDS)
+                .build()
 
-            val connection = url.openConnection() as HttpURLConnection
-            connection.requestMethod = "POST"
-            connection.setRequestProperty("Content-Type", "image/jpeg")
-            connection.setRequestProperty("Content-Length", byteArray.size.toString())
-            connection.doOutput = true
+            val requestBody = MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart(
+                    "file",
+                    "capture.jpg",
+                    byteArray.toRequestBody("image/jpeg".toMediaTypeOrNull())
+                )
+                .build()
 
-            connection.connectTimeout = 10000
-            connection.readTimeout = 120000
+            val request = Request.Builder()
+                .url(BuildConfig.DETECTION_URL)
+                .post(requestBody)
+                .build()
 
-            connection.outputStream.use { os ->
-                os.write(byteArray)
-            }
+            client.newCall(request).execute().use { response ->
+                if (response.isSuccessful) {
+                    val responseString = response.body?.string() ?: "{}"
+                    val jsonObject = JSONObject(responseString)
+                    val inferenceResult = jsonObject.optString("inference", "Got no text.")
+                    val audioUrl = jsonObject.optString("audio_url", "").takeIf { it.isNotEmpty() }
 
-            if (connection.responseCode == 200) {
-                val responseString = connection.inputStream.bufferedReader().use { it.readText() }
-
-                val jsonObject = JSONObject(responseString)
-                val inferenceResult = jsonObject.optString("inference", "Got no text.")
-                val audioUrl = jsonObject.optString("audio_url", "").takeIf { it.isNotEmpty() }
-
-                withContext(Dispatchers.Main) {
-                    onResult(inferenceResult, audioUrl)
+                    withContext(Dispatchers.Main) {
+                        onResult(inferenceResult, audioUrl)
+                    }
+                } else {
+                    withContext(Dispatchers.Main) {
+                        onResult("Server error: ${response.code}", null)
+                    }
                 }
-            } else {
-                withContext(Dispatchers.Main) {
-                    onResult("Server error: ${connection.responseCode}", null)
-                }
             }
-            connection.disconnect()
         } catch (e: Exception) {
             withContext(Dispatchers.Main) {
                 onResult("Network error: ${e.message}", null)
