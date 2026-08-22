@@ -56,7 +56,7 @@ async def detection_req(request: Request, file: UploadFile = File(...)):
 
     # Act based on the inference result
     client_host = request.headers.get("host", "127.0.0.1")
-    response_payload = act(client_host, filename, resident_in_picture, multiple_people, status, greeting)
+    response_payload = await act(client_host, filename, resident_in_picture, multiple_people, status, greeting)
 
     return response_payload
 

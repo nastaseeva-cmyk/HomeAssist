@@ -42,8 +42,7 @@ async def stt_endpoint(request: Request, file: UploadFile = File(...)):
     elapsed_time = time.time() - start_time
     log.info(f"stt_time: {elapsed_time:.2f}s / {lang}:{text}")
     
-    environ = {}
-    cortex(environ, lang, text)
+    await cortex(lang, text)
 
     return {
         "status": "ok",

@@ -23,6 +23,13 @@ class DetectionUploadState {
     var cooldownUntil: Long = 0L
 }
 
+private val httpClient by lazy {
+    OkHttpClient.Builder()
+        .connectTimeout(10, TimeUnit.SECONDS)
+        .readTimeout(120, TimeUnit.SECONDS)
+        .build()
+}
+
 fun uploadImageToBackend(bitmap: Bitmap, onResult: (String, String?) -> Unit) {
     CoroutineScope(Dispatchers.IO).launch {
         try {
@@ -30,10 +37,6 @@ fun uploadImageToBackend(bitmap: Bitmap, onResult: (String, String?) -> Unit) {
             bitmap.compress(Bitmap.CompressFormat.JPEG, 85, stream)
             val byteArray = stream.toByteArray()
 
-            val client = OkHttpClient.Builder()
-                .connectTimeout(10, TimeUnit.SECONDS)
-                .readTimeout(120, TimeUnit.SECONDS)
-                .build()
 
             val requestBody = MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
@@ -49,7 +52,7 @@ fun uploadImageToBackend(bitmap: Bitmap, onResult: (String, String?) -> Unit) {
                 .post(requestBody)
                 .build()
 
-            client.newCall(request).execute().use { response ->
+            httpClient.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
                     val responseString = response.body?.string() ?: "{}"
                     val jsonObject = JSONObject(responseString)

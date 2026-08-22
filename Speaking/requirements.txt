@@ -7,3 +7,4 @@ torchaudio==2.6.0+cu124
 torchvision==0.21.0+cu124
 transformers @ git+https://github.com/huggingface/transformers.git@410c4b17ee0ca343bd1b6b784fbd611f4826f8c4
 uvicorn[standard]==0.30.1
+httpx==0.27.0

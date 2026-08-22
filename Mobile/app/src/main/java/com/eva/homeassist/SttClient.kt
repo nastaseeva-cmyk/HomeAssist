@@ -47,12 +47,15 @@ private fun addWavHeader(pcmData: ByteArray, sampleRate: Int): ByteArray {
 
     return header + pcmData
 }
-class SttClient(private val sttUrl: String) {
-    private val client = OkHttpClient.Builder()
+
+private val sharedSttHttpClient by lazy {
+    OkHttpClient.Builder()
         .connectTimeout(15, TimeUnit.SECONDS)
         .readTimeout(30, TimeUnit.SECONDS)
         .build()
+}
 
+class SttClient(private val sttUrl: String) {
     suspend fun transcribeAudio(audioData: ByteArray): String? = withContext(Dispatchers.IO) {
         try {
             val wavData = addWavHeader(audioData, 16000)
@@ -71,7 +74,7 @@ class SttClient(private val sttUrl: String) {
                 .post(requestBody)
                 .build()
 
-            client.newCall(request).execute().use { response ->
+            sharedSttHttpClient.newCall(request).execute().use { response ->
                 if (response.isSuccessful) {
                     val responseBody = response.body?.string() ?: "{}"
                     val json = JSONObject(responseBody)

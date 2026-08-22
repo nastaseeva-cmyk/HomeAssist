@@ -1,31 +1,23 @@
 import os
-import json
-import urllib.request
-from pathlib import Path
+import httpx
 from logger import get_logger
 
 
 log = get_logger("hearing")
 
-def cortex(environ, lang, text):
+async def cortex(lang, text):
     cortex_req_url = f"http://{os.environ.get('CORTEX_STT_HOST', None)}:{os.environ.get('CORTEX_STT_PORT', None)}/stt"
 
-    print(cortex_req_url)
-
-    cortex_payload = json.dumps(
-        {
-            "lang": lang,
-            "text": text,
-        }
-    ).encode("utf-8")
-    req = urllib.request.Request(cortex_req_url, data=cortex_payload, headers={'Content-Type': 'application/json'})
+    cortex_payload = {
+        "lang": lang,
+        "text": text,
+    }
 
     try:
-        with urllib.request.urlopen(req) as response:
-            response_data = response.read().decode("utf-8")
-            return json.loads(response_data)
-    except urllib.error.URLError as e:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(cortex_req_url, json=cortex_payload, timeout=60.0)
+            response.raise_for_status()
+            return response.json()
+    except Exception as e:
         log.error(f"Error sending stt to the cortex: {e}")
         return None
-
-    return req
