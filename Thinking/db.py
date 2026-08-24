@@ -29,9 +29,8 @@ def init_db():
                 entry TEXT
             )
         """)
-        conn.execute("DROP TABLE IF EXISTS routine_logs")
         conn.execute("""
-            CREATE TABLE routine_logs (
+            CREATE TABLE IF NOT EXISTS routine_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 datestamp TEXT,
                 timestamp TEXT,
@@ -98,21 +97,19 @@ def get_conversations():
     return "\n".join([f"{row[0]} - {row[1]}" for row in rows])
 
 def get_seconds_since_last_conversation():
-    today = datetime.datetime.now().strftime("%Y-%m-%d")
-    
     with sqlite3.connect(get_db_path()) as conn:
         cursor = conn.execute(
-            "SELECT timestamp FROM conversations WHERE datestamp = ? ORDER BY id DESC LIMIT 1", 
-            (today,)
+            "SELECT datestamp, timestamp FROM conversations ORDER BY id DESC LIMIT 1"
         )
         row = cursor.fetchone()
     
     if not row:
         return 999999
         
-    last_timestamp_str = row[0]
+    last_datestamp_str = row[0]
+    last_timestamp_str = row[1]
     try:
-        last_time = datetime.datetime.strptime(f"{today} {last_timestamp_str}", "%Y-%m-%d %H:%M:%S")
+        last_time = datetime.datetime.strptime(f"{last_datestamp_str} {last_timestamp_str}", "%Y-%m-%d %H:%M:%S")
         now = datetime.datetime.now()
         return (now - last_time).total_seconds()
     except Exception as e:

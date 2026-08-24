@@ -42,14 +42,31 @@ async def stt_endpoint(request: Request, file: UploadFile = File(...)):
     elapsed_time = time.time() - start_time
     log.info(f"stt_time: {elapsed_time:.2f}s / {lang}:{text}")
     
-    await cortex(lang, text)
+    cortex_response = await cortex(lang, text)
 
-    return {
+    response = {
         "status": "ok",
         "text": text,
         "language": lang,
         "model": "large-v3",
     }
+    
+    if cortex_response and "audio_url" in cortex_response and cortex_response["audio_url"]:
+        original_url = cortex_response["audio_url"]
+        # Rewrite the URL host to match the external host that the mobile app used
+        client_host = request.headers.get("host", "127.0.0.1")
+        ip_only = client_host.split(":")[0]
+        # Assuming the tts service is at the same IP, port 9001 (based on thinking/calls.py)
+        # Parse the port from the original URL if needed, but it's usually 9001
+        try:
+            import urllib.parse
+            parsed = urllib.parse.urlparse(original_url)
+            rewritten_url = parsed._replace(netloc=f"{ip_only}:{parsed.port}").geturl()
+            response["audio_url"] = rewritten_url
+        except Exception:
+            response["audio_url"] = original_url
+
+    return response
 
 if __name__ == "__main__":
     host = os.environ.get("HEARING_HOST", None)

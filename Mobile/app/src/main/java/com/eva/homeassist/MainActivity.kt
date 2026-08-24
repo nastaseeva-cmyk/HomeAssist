@@ -107,9 +107,20 @@ fun MainScreen() {
                     isListening = false
                     if (chunk.isNotEmpty()) {
                         coroutineScope.launch {
-                            val text = sttClient.transcribeAudio(chunk)
-                            if (text != null && text.isNotBlank()) {
-                                aiMessage = "You said: $text"
+                            val result = sttClient.transcribeAudio(chunk)
+                            if (result != null) {
+                                val text = result.first
+                                val audioUrl = result.second
+                                if (text.isNotBlank()) {
+                                    aiMessage = "You said: $text"
+                                }
+                                if (audioUrl != null) {
+                                    AudioPlayer.play(
+                                        url = audioUrl,
+                                        onStart = { isTalking = true },
+                                        onComplete = { isTalking = false }
+                                    )
+                                }
                             }
                         }
                     }

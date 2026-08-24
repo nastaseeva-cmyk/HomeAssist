@@ -47,3 +47,26 @@ You MUST output ONLY a valid JSON object. Do not include markdown formatting or 
   "short_description": "description text here"
 }}
 """
+
+def get_inactive_posture_prompt():
+    return "Analyze the person in these 3 sequential images taken over a time interval. Is the person maintaining a potentially dangerous inactivity posture (e.g. sleep, collapsed, strange postures) continuously across all 3 images? Briefly explain your reasoning, then end your response with exactly 'RESULT: YES' if they are in a dangerous inactive state, or 'RESULT: NO' if they are active and fine."
+
+def get_stt_prompt(text):
+    resident_language = os.environ.get("RESIDENT_LANGUAGE", "en")
+    assistant_name = os.environ.get("HOMEASSISTANT_NAME", "Assistant")
+    
+    return f"""
+You are an AI assistant named '{assistant_name}'. 
+The resident just said: "{text}"
+
+Analyze the text. Are they talking to you? Are they stating their status (e.g., 'I am ok', 'I am not feeling well') or just engaging in short conversation?
+If they are addressing you or stating a status, respond naturally and empathetically in '{resident_language}'. Keep it very short.
+If they are clearly talking to someone else or the text is random noise, leave the response empty.
+
+Return ONLY a JSON object:
+{{
+  "is_addressing_assistant": "yes" or "no",
+  "status_update": "ok" or "danger" or "none",
+  "spoken_response": "your response here, or empty"
+}}
+"""

@@ -5,7 +5,7 @@ import base64
 from pathlib import Path
 from llama_cpp import Llama
 from logger import get_logger
-from prompts import get_image_prompt  
+from prompts import get_image_prompt, get_inactive_posture_prompt, get_stt_prompt
 from llama_cpp.llama_chat_format import Gemma4ChatHandler 
 
 
@@ -86,10 +86,10 @@ def parse_json_response(response_str):
 
     return resident_in_picture, multiple_people, status, spoken_message
 
-def process_static_sequence(llm, image_paths):
+def process_inactive_sequence(llm, image_paths):
     content = []
 
-    log.info(f"Static check on: {image_paths}")
+    log.info(f"Inactivity check on: {image_paths}")
     
     for i, path in enumerate(image_paths):
         base64_image = encode_image(path)
@@ -98,7 +98,7 @@ def process_static_sequence(llm, image_paths):
 
     content.append({
         "type": "text", 
-        "text": "Analyze the person in these 3 sequential images. Is the person completely stationary (i.e. not moving, stuck in the exact same position) across all 3 images? Briefly explain your reasoning, then end your response with exactly 'RESULT: YES' if they are stationary, or 'RESULT: NO' if they are moving."
+        "text": get_inactive_posture_prompt()
         })
 
     response = llm.create_chat_completion(
@@ -113,3 +113,40 @@ def process_static_sequence(llm, image_paths):
     )
 
     return response["choices"][0]["message"]["content"]
+
+def process_stt_text(llm, text):
+    prompt = get_stt_prompt(text)
+    
+    response = llm.create_chat_completion(
+        messages=[
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ],
+        temperature=0.1,
+        response_format=None
+    )
+    
+    response_str = response["choices"][0]["message"]["content"]
+    
+    log.info(f"STT Inference raw: {response_str}") 
+
+    json_match = re.search(r'\{.*\}', response_str, re.DOTALL)
+    if json_match:
+        clean_json_str = json_match.group(0)
+    else:
+        clean_json_str = response_str
+
+    try:
+        raw_json = json.loads(clean_json_str)
+        inference_json = {k: v for k, v in raw_json.items()}
+    except json.JSONDecodeError:
+        log.error(f"Error parsing STT JSON response")
+        inference_json = {}
+
+    is_addressing = inference_json.get("is_addressing_assistant", "no")
+    status_update = inference_json.get("status_update", "none")
+    spoken_response = inference_json.get("spoken_response", "")
+
+    return is_addressing, status_update, spoken_response

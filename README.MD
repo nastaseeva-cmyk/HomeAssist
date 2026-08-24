@@ -55,6 +55,8 @@ TTS_HOST = "speaking-service"
 TTS_PORT = 9001
 THINKING_DB = "SharedData/db/thinking.db"
 RESIDENT_LANGUAGE = "en"
+INACTIVITY_INTERVAL_SECONDS = 7200
+HOMEASSISTANT_NAME = "Assistant"
 ```
 
 **`Speaking/config.env`**
