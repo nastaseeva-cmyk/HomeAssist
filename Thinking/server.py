@@ -1,14 +1,14 @@
 import os
 import time
 import uvicorn
-from db import init_db
+from db import init_db, write_event
 from cortex import act
 from pathlib import Path
 from logger import get_logger
 from dotenv import load_dotenv
 from pydantic import BaseModel
-from fastapi import FastAPI, Request, HTTPException, UploadFile, File
-from llm import load_model, process_image, parse_json_response
+from fastapi import FastAPI, Request, HTTPException, UploadFile, File, BackgroundTasks
+from llm import load_model, process_image, parse_json_response, process_static_sequence
 
 
 log = get_logger("thinking")
@@ -26,9 +26,27 @@ class STTRequest(BaseModel):
     lang: str
     text: str
 
+def analyze_static_posture():
+    images = sorted(IMAGE_DIR.glob("capture_*.jpg"), key=os.path.getmtime, reverse=True)
+    if len(images) >= 3:
+        last_3 = images[:3]
+        last_3.reverse()
+        
+        log.info("Starting static posture inference...")
+        start_time = time.time()
+        result = process_static_sequence(model, [str(img) for img in last_3])
+        elapsed_time = time.time() - start_time
+        
+        log.info(f"static_posture_inference_time: {elapsed_time:.2f}s")
+        log.info(f"static_posture_result: {result}")
+        
+        if "RESULT: YES" in result.upper():
+            write_event("STATIC_POSTURE_DETECTED", f"Detected across {last_3[0].name}, {last_3[1].name}, {last_3[2].name}")
+
 @app.post("/detection")
 async def detection_req(
-    request: Request, 
+    request: Request,
+    background_tasks: BackgroundTasks, 
     file: UploadFile = File(...)
 ):
     image_bytes = await file.read()
@@ -48,7 +66,6 @@ async def detection_req(
     filename = IMAGE_DIR / f"capture_{int(time.time() * 1000)}.{extension}"
     filename.write_bytes(image_bytes)
 
-    log.error(f"IMAGE RECEIVED:{filename}")
 
     # Process the image with the LLM
     start_time = time.time()
@@ -56,17 +73,16 @@ async def detection_req(
     elapsed_time = time.time() - start_time        
     log.info(f"llm_time: {elapsed_time:.2f}s")
 
-    log.error(f"IMAGE PROCESSED BY LLM:{filename}")
 
     # Process inference result
     resident_in_picture, multiple_people, status, greeting = parse_json_response(inference_result_str)
 
-    log.error(f"JSON PARSED:{filename}")
 
     # Act based on the inference result
     client_host = request.headers.get("host", "127.0.0.1")
     response_payload = await act(client_host, filename, resident_in_picture, multiple_people, status, greeting)
 
+    background_tasks.add_task(analyze_static_posture)
 
     return response_payload
 

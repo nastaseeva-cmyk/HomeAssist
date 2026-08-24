@@ -40,6 +40,15 @@ def init_db():
                 status TEXT
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                datestamp TEXT,
+                timestamp TEXT,
+                event_type TEXT,
+                details TEXT
+            )
+        """)
 
 
 def write_conversation(entry):
@@ -60,6 +69,16 @@ def write_routine_log(resident_in_picture, multiple_people, status):
         conn.execute(
             "INSERT INTO routine_logs (datestamp, timestamp, resident_in_picture, multiple_people, status) VALUES (?, ?, ?, ?, ?)",
             (datestamp, timestamp, resident_in_picture, multiple_people, status)
+        )
+
+def write_event(event_type, details):
+    datestamp = datetime.datetime.now().strftime("%Y-%m-%d")
+    timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+    
+    with sqlite3.connect(get_db_path()) as conn:
+        conn.execute(
+            "INSERT INTO events (datestamp, timestamp, event_type, details) VALUES (?, ?, ?, ?)",
+            (datestamp, timestamp, event_type, details)
         )
 
 def get_conversations():

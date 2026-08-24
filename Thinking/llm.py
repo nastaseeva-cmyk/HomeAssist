@@ -85,3 +85,31 @@ def parse_json_response(response_str):
     spoken_message = inference_json.get("spoken_message", "?")
 
     return resident_in_picture, multiple_people, status, spoken_message
+
+def process_static_sequence(llm, image_paths):
+    content = []
+
+    log.info(f"Static check on: {image_paths}")
+    
+    for i, path in enumerate(image_paths):
+        base64_image = encode_image(path)
+        content.append({"type": "text", "text": f"Image {i+1}:"})
+        content.append({"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}})
+
+    content.append({
+        "type": "text", 
+        "text": "Analyze the person in these 3 sequential images. Is the person completely stationary (i.e. not moving, stuck in the exact same position) across all 3 images? Briefly explain your reasoning, then end your response with exactly 'RESULT: YES' if they are stationary, or 'RESULT: NO' if they are moving."
+        })
+
+    response = llm.create_chat_completion(
+        messages=[
+            {
+                "role": "user",
+                "content": content
+            }
+        ],
+        temperature=0.1,
+        response_format=None
+    )
+
+    return response["choices"][0]["message"]["content"]
