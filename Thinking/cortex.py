@@ -1,11 +1,13 @@
 from calls import tts
 from logger import get_logger
-from db import write_conversation, get_seconds_since_last_conversation
+from db import write_conversation, get_seconds_since_last_conversation, write_routine_log
 import datetime
 
 log = get_logger("thinking")
 
-async def act(client_host, filename, resident_in_picture, multiple_people, status, spoken_message, person_x=None, person_y=None, face_x=None, face_y=None, person_w=None, person_h=None):
+async def act(client_host, filename, resident_in_picture, multiple_people, status, spoken_message):
+    write_routine_log(resident_in_picture, multiple_people, status)
+
     # SITUATION: Resident is in the picture, status is "ok", and there is only one person detected
     # ACTION: Generate a conversation with corresponding TTS and return the audio URL along with the inference results
     if resident_in_picture == "yes" and multiple_people == "no" and status == "ok":
@@ -28,8 +30,6 @@ async def act(client_host, filename, resident_in_picture, multiple_people, statu
         write_conversation(text_to_speak)
         audio_url = await tts(client_host, text_to_speak)
 
-        log.error(f"DONE ACTING 1 {filename}")
-
         return {
             "status": "saved", 
             "file": str(filename),
@@ -50,8 +50,6 @@ async def act(client_host, filename, resident_in_picture, multiple_people, statu
         write_conversation(text_to_speak)
         audio_url = await tts(client_host, text_to_speak)
 
-        log.error(f"DONE ACTING 2 {filename}")
-
         return {
             "status": "saved", 
             "file": str(filename),
@@ -68,8 +66,6 @@ async def act(client_host, filename, resident_in_picture, multiple_people, statu
     # SITUATION: No danger detected, resident not in picture, or multiple people detected
     # ACTION: Return the inference results without generating TTS
     else:
-        log.error(f"DONE ACTING 3 {filename}")
-
         return {
             "status": "saved", 
             "file": str(filename),

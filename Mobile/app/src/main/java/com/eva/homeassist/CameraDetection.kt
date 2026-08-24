@@ -44,7 +44,8 @@ fun FrontCameraPreview(
     modifier: Modifier = Modifier,
     onPersonDetected: (Offset, Boolean, Float) -> Unit,
     onInferenceResult: (String, String?) -> Unit,
-    onCooldownActivated: (Long) -> Unit
+    onCooldownActivated: (Long) -> Unit,
+    onUploadStateChanged: (Boolean) -> Unit
 ) {
     val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
 
@@ -122,11 +123,13 @@ fun FrontCameraPreview(
 
                                 if (!uploadState.isUploading && currentTime >= uploadState.cooldownUntil) {
                                     uploadState.isUploading = true
+                                    onUploadStateChanged(true)
                                     uploadImageToBackend(rotatedBitmap) { resultText, audioUrl ->
                                         onInferenceResult(resultText, audioUrl)
                                         val newCooldown = System.currentTimeMillis() + COOLDOWN_TIME_MS
                                         uploadState.cooldownUntil = newCooldown
                                         uploadState.isUploading = false
+                                        onUploadStateChanged(false)
                                         onCooldownActivated(newCooldown)
                                     }
                                 }
@@ -150,7 +153,6 @@ fun FrontCameraPreview(
                             } else {
                                 if (uploadState.isPresent) {
                                     uploadState.isPresent = false
-                                    uploadState.cooldownUntil = currentTime + COOLDOWN_TIME_MS
                                 }
                                 onPersonDetected(Offset.Zero, false, 0f)
                             }

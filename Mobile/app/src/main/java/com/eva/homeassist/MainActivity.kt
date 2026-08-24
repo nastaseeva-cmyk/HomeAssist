@@ -94,7 +94,7 @@ fun MainScreen() {
     val voiceRecorder = remember { VoiceRecorder(context) }
     val coroutineScope = rememberCoroutineScope()
 
-    val uploadState = remember { DetectionUploadState() }
+    var isUploading by remember { mutableStateOf(false) }
 
     LaunchedEffect(hasCameraPermission) {
         if (hasCameraPermission) {
@@ -156,7 +156,7 @@ fun MainScreen() {
             isTalking = isTalking,
             isCooling = isCooling,
             isListening = isListening,
-            isUploading = uploadState.isUploading
+            isUploading = isUploading
         )
 
         Box(
@@ -187,6 +187,9 @@ fun MainScreen() {
                     },
                     onCooldownActivated = { newExpirationTime ->
                         cooldownExpiration = newExpirationTime
+                    },
+                    onUploadStateChanged = { uploading ->
+                        isUploading = uploading
                     }
                 )
             } else {
