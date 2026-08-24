@@ -29,6 +29,16 @@ def init_db():
                 entry TEXT
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS routine_logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                datestamp TEXT,
+                timestamp TEXT,
+                resident_in_picture TEXT,
+                multiple_people TEXT,
+                status TEXT
+            )
+        """)
 
 def write_conversation(entry):
     datestamp = datetime.datetime.now().strftime("%Y-%m-%d")
@@ -40,12 +50,22 @@ def write_conversation(entry):
             (datestamp, timestamp, entry)
         )
 
+def write_routine_log(resident_in_picture, multiple_people, status):
+    datestamp = datetime.datetime.now().strftime("%Y-%m-%d")
+    timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+    
+    with sqlite3.connect(get_db_path()) as conn:
+        conn.execute(
+            "INSERT INTO routine_logs (datestamp, timestamp, resident_in_picture, multiple_people, status) VALUES (?, ?, ?, ?, ?)",
+            (datestamp, timestamp, resident_in_picture, multiple_people, status)
+        )
+
 def get_conversations():
     today = datetime.datetime.now().strftime("%Y-%m-%d")
     
     with sqlite3.connect(get_db_path()) as conn:
         cursor = conn.execute(
-            "SELECT timestamp, entry FROM conversations WHERE datestamp = ?", 
+            "SELECT timestamp, entry FROM conversations WHERE datestamp = ? ORDER BY id DESC LIMIT 3", 
             (today,)
         )
         rows = cursor.fetchall()
@@ -53,4 +73,27 @@ def get_conversations():
     if not rows:
         return "No conversations yet for today - this is the first interaction."
     
+    rows.reverse()
     return "\n".join([f"{row[0]} - {row[1]}" for row in rows])
+
+def get_seconds_since_last_conversation():
+    today = datetime.datetime.now().strftime("%Y-%m-%d")
+    
+    with sqlite3.connect(get_db_path()) as conn:
+        cursor = conn.execute(
+            "SELECT timestamp FROM conversations WHERE datestamp = ? ORDER BY id DESC LIMIT 1", 
+            (today,)
+        )
+        row = cursor.fetchone()
+    
+    if not row:
+        return 999999
+        
+    last_timestamp_str = row[0]
+    try:
+        last_time = datetime.datetime.strptime(f"{today} {last_timestamp_str}", "%Y-%m-%d %H:%M:%S")
+        now = datetime.datetime.now()
+        return (now - last_time).total_seconds()
+    except Exception as e:
+        log.error(f"Error parsing timestamp: {e}")
+        return 999999

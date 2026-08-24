@@ -97,15 +97,18 @@ fun MainScreen() {
     LaunchedEffect(hasCameraPermission) {
         if (hasCameraPermission) {
             voiceRecorder.startListening(
+                isMuted = { isTalking },
                 onSpeechStart = {
                     isListening = true
                 },
                 onSpeechEnd = { chunk ->
                     isListening = false
-                    coroutineScope.launch {
-                        val text = sttClient.transcribeAudio(chunk)
-                        if (text != null && text.isNotBlank()) {
-                            aiMessage = "You said: $text"
+                    if (chunk.isNotEmpty()) {
+                        coroutineScope.launch {
+                            val text = sttClient.transcribeAudio(chunk)
+                            if (text != null && text.isNotBlank()) {
+                                aiMessage = "You said: $text"
+                            }
                         }
                     }
                 }

@@ -21,6 +21,7 @@ class VoiceRecorder(
 ) {
     @SuppressLint("MissingPermission")
     suspend fun startListening(
+        isMuted: () -> Boolean = { false },
         onSpeechStart: () -> Unit,
         onSpeechEnd: (ByteArray) -> Unit
     ) = withContext(Dispatchers.IO) {
@@ -67,6 +68,17 @@ class VoiceRecorder(
             while (isActive) {
                 val readResult = audioRecord.read(shortBuffer, 0, frameSize)
                 if (readResult == frameSize) {
+                    if (isMuted()) {
+                        if (isSpeaking) {
+                            isSpeaking = false
+                            onSpeechEnd(ByteArray(0))
+                        }
+                        isSpeaking = false
+                        silenceStartTime = 0L
+                        audioStream.reset()
+                        preSpeechBuffer.clear()
+                        continue
+                    }
 
                     val isSpeechDetected = vad.isSpeech(shortBuffer)
 

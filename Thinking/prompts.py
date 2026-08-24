@@ -5,11 +5,12 @@ from db import get_conversations
 
 def get_image_prompt():
    resident_language = os.environ.get("RESIDENT_LANGUAGE", "en")
+   resident_formula = os.environ.get("RESIDENT_FORMULA", "Mister Smith")
 
    return f"""
 You are an AI assistant analyzing images for a continuous home monitoring system. 
 
-The home belongs to the person in the image labeled "Resident photo". 
+The home belongs to the person in the image labeled "Resident photo". You should address to the resident as '{resident_formula}'.
 
 The system is designed to detect if he is present in the house, if he has guests, and to assess the overall safety status.
 
@@ -33,8 +34,8 @@ Instructions:
 5. Spoken Message: In the "spoken_message" field, generate a natural, conversational response in '{resident_language}' language. 
    - Read the conversation history of today: '{get_conversations()}'.
    - CRITICAL: DO NOT repeat greetings (e.g., "Bună", "Salut") if you have already greeted the person recently in the history.
-   - If a greeting is no longer appropriate, make a friendly, context-aware observation about what they are doing in the image, or ask a casual question.
-   - Say a different think every time - do not repeat. Medium size message. Leave empty ONLY if no one is detected.
+   - If a greeting is no longer appropriate, keep it very brief and casual (e.g. "All good?", "Totul bine?").
+   - Say a different thing every time - do not repeat. Keep the message extremely short. Leave empty ONLY if no one is detected.
 
 Response Format:
 You MUST output ONLY a valid JSON object. Do not include markdown formatting or conversational text outside the JSON. Use exactly these keys:
