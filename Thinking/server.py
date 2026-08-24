@@ -27,7 +27,10 @@ class STTRequest(BaseModel):
     text: str
 
 @app.post("/detection")
-async def detection_req(request: Request, file: UploadFile = File(...)):
+async def detection_req(
+    request: Request, 
+    file: UploadFile = File(...)
+):
     image_bytes = await file.read()
     
     if not image_bytes:
@@ -45,18 +48,25 @@ async def detection_req(request: Request, file: UploadFile = File(...)):
     filename = IMAGE_DIR / f"capture_{int(time.time() * 1000)}.{extension}"
     filename.write_bytes(image_bytes)
 
+    log.error(f"IMAGE RECEIVED:{filename}")
+
     # Process the image with the LLM
     start_time = time.time()
     inference_result_str = process_image(model, str(filename))
     elapsed_time = time.time() - start_time        
     log.info(f"llm_time: {elapsed_time:.2f}s")
 
+    log.error(f"IMAGE PROCESSED BY LLM:{filename}")
+
     # Process inference result
     resident_in_picture, multiple_people, status, greeting = parse_json_response(inference_result_str)
+
+    log.error(f"JSON PARSED:{filename}")
 
     # Act based on the inference result
     client_host = request.headers.get("host", "127.0.0.1")
     response_payload = await act(client_host, filename, resident_in_picture, multiple_people, status, greeting)
+
 
     return response_payload
 

@@ -120,12 +120,13 @@ fun FrontCameraPreview(
                             if (person != null) {
                                 uploadState.isPresent = true
 
-                                if (!uploadState.hasUploadedCurrentSession && currentTime >= uploadState.cooldownUntil) {
-                                    uploadState.hasUploadedCurrentSession = true
+                                if (!uploadState.isUploading && currentTime >= uploadState.cooldownUntil) {
+                                    uploadState.isUploading = true
                                     uploadImageToBackend(rotatedBitmap) { resultText, audioUrl ->
                                         onInferenceResult(resultText, audioUrl)
                                         val newCooldown = System.currentTimeMillis() + COOLDOWN_TIME_MS
                                         uploadState.cooldownUntil = newCooldown
+                                        uploadState.isUploading = false
                                         onCooldownActivated(newCooldown)
                                     }
                                 }
@@ -143,20 +144,13 @@ fun FrontCameraPreview(
                                 val screenNormX = (1f - rawNormX) * 2f - 1f
                                 val screenNormY = (cy / imageHeight) * 2f - 1f
 
-                                val verticalScale = if (person != null) {
-                                    person.boundingBox.height() / imageHeight.toFloat()
-                                } else {
-                                    (trackingRect.height() / imageHeight.toFloat()) * 4f
-                                }
+                                val verticalScale = person.boundingBox.height() / imageHeight.toFloat()
 
                                 onPersonDetected(Offset(screenNormX, screenNormY), true, verticalScale.coerceIn(0f, 1f))
                             } else {
                                 if (uploadState.isPresent) {
                                     uploadState.isPresent = false
-                                    if (uploadState.hasUploadedCurrentSession) {
-                                        uploadState.cooldownUntil = currentTime + COOLDOWN_TIME_MS
-                                        uploadState.hasUploadedCurrentSession = false
-                                    }
+                                    uploadState.cooldownUntil = currentTime + COOLDOWN_TIME_MS
                                 }
                                 onPersonDetected(Offset.Zero, false, 0f)
                             }

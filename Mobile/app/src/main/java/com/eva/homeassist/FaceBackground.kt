@@ -18,6 +18,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import kotlin.math.max
+import kotlin.math.min
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
@@ -31,9 +32,14 @@ fun StylizedTrackingFaceBackground(
     personScale: Float,
     isTalking: Boolean,
     isCooling: Boolean,
-    isListening: Boolean
+    isListening: Boolean,
+    isUploading: Boolean
 ) {
-    val faceColor = if (isCooling) Color.Gray else Color.Cyan
+    val faceColor = when {
+        isUploading -> Color.Red
+        isCooling -> Color.Gray
+        else -> Color.Cyan
+    }
     val earColor = if (isListening) Color.Red else Color.Gray
     val earColorMiddle = Color.Black
     val pupilColor = Color.Red
@@ -67,25 +73,27 @@ fun StylizedTrackingFaceBackground(
     Canvas(modifier = modifier) {
         val canvasWidth = size.width
         val canvasHeight = size.height
+        val minDim = min(canvasWidth, canvasHeight)
 
         val centerX = canvasWidth * 0.5f
-        val faceTopY = canvasHeight * 0.3f
-        val faceHeight = canvasHeight * 0.4f
+        val centerY = canvasHeight * 0.5f
+        val faceTopY = centerY - (minDim * 0.25f)
+        val faceHeight = minDim * 0.5f
 
         val eyeY = faceTopY + faceHeight * 0.2f
-        val eyeOffsetX = canvasWidth * 0.18f
-        val eyeRadius = canvasWidth * 0.12f
+        val eyeOffsetX = minDim * 0.22f
+        val eyeRadius = minDim * 0.12f
 
         val earY = faceTopY + faceHeight * 0.2f
-        val earOffsetX = canvasWidth * 0.40f
-        val earOffsetY = canvasHeight * 0.05f
-        val earRadius = canvasWidth * 0.05f
+        val earOffsetX = minDim * 0.45f
+        val earOffsetY = minDim * 0.05f
+        val earRadius = minDim * 0.06f
 
         val noseTopY = faceTopY + faceHeight * 0.4f
         val noseBottomY = faceTopY + faceHeight * 0.6f
 
         val mouthY = faceTopY + faceHeight * 0.85f
-        val mouthWidth = canvasWidth * 0.25f
+        val mouthWidth = minDim * 0.35f
 
         val minPupilRadius = eyeRadius * 0.2f
         val maxPupilRadius = eyeRadius * 0.75f
@@ -190,7 +198,7 @@ fun StylizedTrackingFaceBackground(
 
 
         // mouth
-        val maxAmplitude = canvasWidth * 0.08f
+        val maxAmplitude = minDim * 0.1f
         val currentAmplitude = maxAmplitude * currentMouthOpen
 
         val mouthPath = Path().apply {

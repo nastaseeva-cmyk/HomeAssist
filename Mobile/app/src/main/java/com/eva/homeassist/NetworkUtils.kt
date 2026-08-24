@@ -19,7 +19,7 @@ const val COOLDOWN_TIME_MS = 1 * 60 * 1000L
 
 class DetectionUploadState {
     var isPresent: Boolean = false
-    var hasUploadedCurrentSession: Boolean = false
+    var isUploading: Boolean = false
     var cooldownUntil: Long = 0L
 }
 
@@ -30,7 +30,10 @@ private val httpClient by lazy {
         .build()
 }
 
-fun uploadImageToBackend(bitmap: Bitmap, onResult: (String, String?) -> Unit) {
+fun uploadImageToBackend(
+    bitmap: Bitmap,
+    onResult: (String, String?) -> Unit
+) {
     CoroutineScope(Dispatchers.IO).launch {
         try {
             val stream = ByteArrayOutputStream()
@@ -38,14 +41,15 @@ fun uploadImageToBackend(bitmap: Bitmap, onResult: (String, String?) -> Unit) {
             val byteArray = stream.toByteArray()
 
 
-            val requestBody = MultipartBody.Builder()
+            val requestBodyBuilder = MultipartBody.Builder()
                 .setType(MultipartBody.FORM)
                 .addFormDataPart(
                     "file",
                     "capture.jpg",
                     byteArray.toRequestBody("image/jpeg".toMediaTypeOrNull())
                 )
-                .build()
+
+            val requestBody = requestBodyBuilder.build()
 
             val request = Request.Builder()
                 .url(BuildConfig.DETECTION_URL)

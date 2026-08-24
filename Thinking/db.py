@@ -29,8 +29,9 @@ def init_db():
                 entry TEXT
             )
         """)
+        conn.execute("DROP TABLE IF EXISTS routine_logs")
         conn.execute("""
-            CREATE TABLE IF NOT EXISTS routine_logs (
+            CREATE TABLE routine_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 datestamp TEXT,
                 timestamp TEXT,
@@ -39,6 +40,7 @@ def init_db():
                 status TEXT
             )
         """)
+
 
 def write_conversation(entry):
     datestamp = datetime.datetime.now().strftime("%Y-%m-%d")

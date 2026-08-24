@@ -94,6 +94,8 @@ fun MainScreen() {
     val voiceRecorder = remember { VoiceRecorder(context) }
     val coroutineScope = rememberCoroutineScope()
 
+    val uploadState = remember { DetectionUploadState() }
+
     LaunchedEffect(hasCameraPermission) {
         if (hasCameraPermission) {
             voiceRecorder.startListening(
@@ -153,13 +155,14 @@ fun MainScreen() {
             personScale = animatedPersonScale,
             isTalking = isTalking,
             isCooling = isCooling,
-            isListening = isListening
+            isListening = isListening,
+            isUploading = uploadState.isUploading
         )
 
         Box(
             modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 0.dp, end = 0.dp, bottom = 100.dp)
+                .align(Alignment.TopEnd)
+                .padding(top = 24.dp, end = 24.dp)
                 .size(80.dp, 80.dp)
                 .clip(RoundedCornerShape(12.dp))
                 .background(Color.Black)
