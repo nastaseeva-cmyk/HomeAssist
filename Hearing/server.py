@@ -6,7 +6,7 @@ from calls import cortex
 from logger import get_logger
 from dotenv import load_dotenv
 from stt import load_model, transcribe_audio
-from fastapi import FastAPI, Request, HTTPException, UploadFile, File
+from fastapi import FastAPI, Request, HTTPException, UploadFile, File, Form
 
 
 log = get_logger("hearing")
@@ -20,7 +20,7 @@ model = load_model()
 app = FastAPI()
 
 @app.post("/stt")
-async def stt_endpoint(request: Request, file: UploadFile = File(...)):
+async def stt_endpoint(request: Request, location: str = Form("Unknown"), file: UploadFile = File(...)):
     audio_bytes = await file.read()
     
     if not audio_bytes:
@@ -42,7 +42,7 @@ async def stt_endpoint(request: Request, file: UploadFile = File(...)):
     elapsed_time = time.time() - start_time
     log.info(f"stt_time: {elapsed_time:.2f}s / {lang}:{text}")
     
-    cortex_response = await cortex(lang, text)
+    cortex_response = await cortex(lang, text, location)
 
     response = {
         "status": "ok",

@@ -5,12 +5,13 @@ from logger import get_logger
 
 log = get_logger("hearing")
 
-async def cortex(lang, text):
+async def cortex(lang, text, location="Unknown"):
     cortex_req_url = f"http://{os.environ.get('CORTEX_STT_HOST', None)}:{os.environ.get('CORTEX_STT_PORT', None)}/stt"
 
     cortex_payload = {
         "lang": lang,
         "text": text,
+        "location": location
     }
 
     try:

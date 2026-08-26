@@ -1,6 +1,5 @@
 package com.eva.homeassist
 
-import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -68,6 +67,7 @@ class SttClient(private val sttUrl: String) {
                     "audio.wav",
                     wavData.toRequestBody("audio/wav".toMediaTypeOrNull())
                 )
+                .addFormDataPart("location", BuildConfig.LOCATION_NAME)
                 .build()
 
             val request = Request.Builder()

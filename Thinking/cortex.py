@@ -3,8 +3,8 @@ import time
 from calls import tts
 from pathlib import Path
 from logger import get_logger
-from llm import process_inactive_sequence
-from db import write_conversation, get_seconds_since_last_conversation, write_routine_log, write_event, write_conversation
+from llm import process_inactive_sequence, process_routine_analysis
+from db import get_seconds_since_last_conversation, write_routine_log, write_event, write_conversation, get_all_historical_timestamps, get_hours_since_resident_last_seen
 
 
 log = get_logger("thinking")
@@ -12,7 +12,7 @@ log = get_logger("thinking")
 IMAGE_DIR = Path(__file__).resolve().parent.parent / "SharedData/images"
 IMAGE_DIR.mkdir(parents=True, exist_ok=True)
 
-def analyze_inactive_posture():
+def analyze_inactive_posture(model):
     interval = int(os.environ.get("INACTIVITY_INTERVAL_SECONDS", 7200))
     images = sorted(IMAGE_DIR.glob("capture_*.jpg"), key=os.path.getmtime, reverse=True)
     
@@ -44,8 +44,9 @@ def analyze_inactive_posture():
             if "RESULT: YES" in result.upper():
                 write_event("INACTIVE_POSTURE_DETECTED", f"Detected across {selected_images[0].name}, {selected_images[1].name}, {selected_images[2].name}")
 
-async def act(client_host, filename, resident_in_picture, multiple_people, status, spoken_message):
-    write_routine_log(resident_in_picture, multiple_people, status)
+async def act(client_host, filename, resident_in_picture, multiple_people, status, greeting, location="Unknown"):
+    log.info(f"Resident: {resident_in_picture}, Multiple: {multiple_people}, Status: {status}")
+    write_routine_log(resident_in_picture, multiple_people, status, location)
 
     # SITUATION: Resident is in the picture, status is "ok", and there is only one person detected
     # ACTION: Generate a conversation with corresponding TTS and return the audio URL along with the inference results
@@ -65,7 +66,7 @@ async def act(client_host, filename, resident_in_picture, multiple_people, statu
                 },
             }
 
-        text_to_speak = spoken_message
+        text_to_speak = greeting
         write_conversation(text_to_speak)
         audio_url = await tts(client_host, text_to_speak)
 
@@ -76,7 +77,7 @@ async def act(client_host, filename, resident_in_picture, multiple_people, statu
                 "resident_in_picture": resident_in_picture,
                 "multiple_people": multiple_people,
                 "status": status,
-                "spoken_message": spoken_message,
+                "spoken_message": greeting,
             },
             "audio_url": audio_url
         }
@@ -85,7 +86,7 @@ async def act(client_host, filename, resident_in_picture, multiple_people, statu
     # SITUATION: Danger detected (status is "danger")
     # ACTION: Generate a conversation with corresponding TTS and return the audio URL along with the inference results
     elif status == "danger":
-        text_to_speak = spoken_message
+        text_to_speak = greeting
         write_conversation(text_to_speak)
         audio_url = await tts(client_host, text_to_speak)
 
@@ -96,7 +97,7 @@ async def act(client_host, filename, resident_in_picture, multiple_people, statu
                 "resident_in_picture": resident_in_picture,
                 "multiple_people": multiple_people,
                 "status": status,
-                "spoken_message": spoken_message,
+                "spoken_message": greeting,
             },
             "audio_url": audio_url
             
@@ -114,5 +115,59 @@ async def act(client_host, filename, resident_in_picture, multiple_people, statu
                 "status": status,
             },
         }
+
+async def check_routine_anomaly(model):
+    import asyncio
+    import datetime
+    from anomaly_model import predict_anomaly
+    
+    log.info("Starting rule-based & ML anomaly check...")
+    
+    now = datetime.datetime.now()
+    current_hour = now.hour
+    
+    if current_hour >= 23 or current_hour < 7:
+        log.info("Night time active. Ignoring routine checks.")
+        return
+        
+    hours_missing = get_hours_since_resident_last_seen()
+    
+    if hours_missing < 0:
+        log.info("Resident never seen yet. Skipping anomaly check.")
+        return
+        
+    if hours_missing < 2.0:
+        log.info(f"Resident missing for {hours_missing:.1f}h. Below 2h threshold.")
+        return
+        
+    historical_datetimes = get_all_historical_timestamps()
+    
+    is_anomaly = False
+    
+    if historical_datetimes:
+        first_seen = min(historical_datetimes)
+        days_of_data = (now - first_seen).total_seconds() / (3600 * 24)
+        
+        if days_of_data >= 3.0:
+            is_anomaly = predict_anomaly(historical_datetimes, now, hours_missing)
+        else:
+            if hours_missing > 8.0:
+                is_anomaly = True
+                
+    if not is_anomaly:
+        return
+        
+    log.info(f"ANOMALY TRIGGERED. Generating TTS message via LLM...")
+    start_time = time.time()
+    spoken_message = await asyncio.to_thread(process_routine_analysis, model, hours_missing)
+    elapsed_time = time.time() - start_time
+    
+    log.info(f"TTS_generation_time: {elapsed_time:.2f}s, message: {spoken_message}")
+    
+    if spoken_message:
+        write_event("ROUTINE_ANOMALY_DETECTED", f"Resident missing for {hours_missing:.1f}h. Message: {spoken_message}")
+        write_conversation(spoken_message)
+        client_host = os.environ.get("THINKING_HOST", "127.0.0.1")
+        await tts(client_host, spoken_message)
 
     

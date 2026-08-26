@@ -37,11 +37,13 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.eva.homeassist.ui.theme.HomeAssistTheme
 import android.view.WindowManager
+import androidx.compose.foundation.layout.Column
 import androidx.compose.runtime.mutableLongStateOf
 import kotlinx.coroutines.delay
 import kotlin.time.Duration.Companion.milliseconds
 import androidx.compose.foundation.layout.systemBarsPadding
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.unit.sp
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -170,42 +172,59 @@ fun MainScreen() {
             isUploading = isUploading
         )
 
-        Box(
+        Column(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = 24.dp, end = 24.dp)
-                .size(80.dp, 80.dp)
-                .clip(RoundedCornerShape(12.dp))
-                .background(Color.Black)
+                .padding(top = 24.dp, end = 24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            if (hasCameraPermission) {
-                FrontCameraPreview(
-                    modifier = Modifier.fillMaxSize(),
-                    onPersonDetected = { normalizedOffset, detected, scale ->
-                        rawLookOffset = normalizedOffset
-                        isPersonDetected = detected
-                        rawPersonScale = scale
-                    },
-                    onInferenceResult = { resultText, audioUrl ->
-                        aiMessage = resultText
-                        if (audioUrl != null) {
-                            AudioPlayer.play(
-                                url = audioUrl,
-                                onStart = { isTalking = true },
-                                onComplete = { isTalking = false }
-                            )
+
+            Box(
+                modifier = Modifier
+                    .size(80.dp, 80.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.Black)
+            ) {
+                if (hasCameraPermission) {
+                    FrontCameraPreview(
+                        modifier = Modifier.fillMaxSize(),
+                        onPersonDetected = { normalizedOffset, detected, scale ->
+                            rawLookOffset = normalizedOffset
+                            isPersonDetected = detected
+                            rawPersonScale = scale
+                        },
+                        onInferenceResult = { resultText, audioUrl ->
+                            aiMessage = resultText
+                            if (audioUrl != null) {
+                                AudioPlayer.play(
+                                    url = audioUrl,
+                                    onStart = { isTalking = true },
+                                    onComplete = { isTalking = false }
+                                )
+                            }
+                        },
+                        onCooldownActivated = { newExpirationTime ->
+                            cooldownExpiration = newExpirationTime
+                        },
+                        onUploadStateChanged = { uploading ->
+                            isUploading = uploading
                         }
-                    },
-                    onCooldownActivated = { newExpirationTime ->
-                        cooldownExpiration = newExpirationTime
-                    },
-                    onUploadStateChanged = { uploading ->
-                        isUploading = uploading
-                    }
-                )
-            } else {
-                Text("No Permission", color = Color.White, modifier = Modifier.align(Alignment.Center))
+                    )
+                } else {
+                    Text(
+                        "No Permission",
+                        color = Color.White,
+                        modifier = Modifier.align(Alignment.Center)
+                    )
+                }
             }
+
+            Text(
+                text = BuildConfig.LOCATION_NAME,
+                fontSize = 10.sp,
+                color = Color.White,
+                modifier = Modifier.padding(top = 8.dp)
+            )
         }
     }
 }

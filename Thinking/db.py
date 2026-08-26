@@ -1,4 +1,5 @@
 import os
+import time
 import sqlite3
 import datetime
 from pathlib import Path
@@ -29,16 +30,25 @@ def init_db():
                 entry TEXT
             )
         """)
-        conn.execute("""
+        conn.execute(
+            """
             CREATE TABLE IF NOT EXISTS routine_logs (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                datestamp TEXT,
-                timestamp TEXT,
-                resident_in_picture TEXT,
-                multiple_people TEXT,
-                status TEXT
+                datestamp TEXT NOT NULL,
+                timestamp TEXT NOT NULL,
+                resident_in_picture TEXT NOT NULL,
+                multiple_people TEXT NOT NULL,
+                status TEXT NOT NULL,
+                location TEXT
             )
-        """)
+            """
+        )
+        
+        try:
+            conn.execute("ALTER TABLE routine_logs ADD COLUMN location TEXT")
+        except sqlite3.OperationalError:
+            pass
+
         conn.execute("""
             CREATE TABLE IF NOT EXISTS events (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -60,14 +70,17 @@ def write_conversation(entry):
             (datestamp, timestamp, entry)
         )
 
-def write_routine_log(resident_in_picture, multiple_people, status):
-    datestamp = datetime.datetime.now().strftime("%Y-%m-%d")
-    timestamp = datetime.datetime.now().strftime("%H:%M:%S")
-    
+def write_routine_log(resident_in_picture, multiple_people, status, location="Unknown"):
+    datestamp = time.strftime("%Y-%m-%d")
+    timestamp = time.strftime("%H:%M:%S")
+
     with sqlite3.connect(get_db_path()) as conn:
         conn.execute(
-            "INSERT INTO routine_logs (datestamp, timestamp, resident_in_picture, multiple_people, status) VALUES (?, ?, ?, ?, ?)",
-            (datestamp, timestamp, resident_in_picture, multiple_people, status)
+            """
+            INSERT INTO routine_logs (datestamp, timestamp, resident_in_picture, multiple_people, status, location)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (datestamp, timestamp, resident_in_picture, multiple_people, status, location)
         )
 
 def write_event(event_type, details):
@@ -115,3 +128,38 @@ def get_seconds_since_last_conversation():
     except Exception as e:
         log.error(f"Error parsing timestamp: {e}")
         return 999999
+
+def get_all_historical_timestamps():
+    with sqlite3.connect(get_db_path()) as conn:
+        cursor = conn.execute(
+            "SELECT datestamp, timestamp FROM routine_logs WHERE resident_in_picture = 'yes'"
+        )
+        rows = cursor.fetchall()
+        
+    datetimes = []
+    for row in rows:
+        try:
+            dt = datetime.datetime.strptime(f"{row[0]} {row[1]}", "%Y-%m-%d %H:%M:%S")
+            datetimes.append(dt)
+        except Exception as e:
+            continue
+            
+    return datetimes
+
+def get_hours_since_resident_last_seen():
+    with sqlite3.connect(get_db_path()) as conn:
+        cursor = conn.execute(
+            "SELECT datestamp, timestamp FROM routine_logs WHERE resident_in_picture = 'yes' ORDER BY id DESC LIMIT 1"
+        )
+        row = cursor.fetchone()
+        
+    if not row:
+        return -1.0 # Never seen
+        
+    try:
+        last_time = datetime.datetime.strptime(f"{row[0]} {row[1]}", "%Y-%m-%d %H:%M:%S")
+        now = datetime.datetime.now()
+        return (now - last_time).total_seconds() / 3600.0
+    except Exception as e:
+        log.error(f"Error parsing timestamp: {e}")
+        return -1.0

@@ -48,6 +48,7 @@ fun uploadImageToBackend(
                     "capture.jpg",
                     byteArray.toRequestBody("image/jpeg".toMediaTypeOrNull())
                 )
+                .addFormDataPart("location", BuildConfig.LOCATION_NAME)
 
             val requestBody = requestBodyBuilder.build()
 

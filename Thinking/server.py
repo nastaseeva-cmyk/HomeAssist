@@ -1,3 +1,4 @@
+import asyncio
 import os
 import time
 import uvicorn
@@ -6,10 +7,10 @@ from pathlib import Path
 from logger import get_logger
 from dotenv import load_dotenv
 from pydantic import BaseModel
-from cortex import act, analyze_inactive_posture
-from db import init_db, write_event, write_conversation
-from fastapi import FastAPI, Request, HTTPException, UploadFile, File, BackgroundTasks
+from cortex import act, analyze_inactive_posture, check_routine_anomaly
+from db import init_db, write_event, write_conversation, write_routine_log
 from llm import load_model, process_image, parse_json_response, process_stt_text
+from fastapi import FastAPI, Request, HTTPException, UploadFile, File, BackgroundTasks, Form
 
 
 log = get_logger("thinking")
@@ -26,12 +27,14 @@ app = FastAPI()
 class STTRequest(BaseModel):
     lang: str
     text: str
+    location: str = "Unknown"
 
 
 @app.post("/detection")
 async def detection_req(
     request: Request,
     background_tasks: BackgroundTasks, 
+    location: str = Form("Unknown"),
     file: UploadFile = File(...)
 ):
     image_bytes = await file.read()
@@ -65,9 +68,10 @@ async def detection_req(
 
     # Act based on the inference result
     client_host = request.headers.get("host", "127.0.0.1")
-    response_payload = await act(client_host, filename, resident_in_picture, multiple_people, status, greeting)
+    write_routine_log(resident_in_picture, multiple_people, status, location)
+    response_payload = await act(client_host, filename, resident_in_picture, multiple_people, status, greeting, location)
 
-    background_tasks.add_task(analyze_inactive_posture)
+    background_tasks.add_task(analyze_inactive_posture, model)
 
     return response_payload
 
@@ -97,6 +101,19 @@ async def stt_req(payload: STTRequest, request: Request):
             }
 
     return {"status": "done", "lang": payload.lang, "text": payload.text}
+
+async def routine_analyzer_loop():
+    await asyncio.sleep(60)
+    while True:
+        try:
+            await check_routine_anomaly(model)
+        except Exception as e:
+            log.error(f"Error in routine analyzer loop: {e}")
+        await asyncio.sleep(30*60)
+
+@app.on_event("startup")
+async def startup_event():
+    asyncio.create_task(routine_analyzer_loop())
 
 if __name__ == "__main__":
     host = os.environ.get("THINKING_HOST", None)
