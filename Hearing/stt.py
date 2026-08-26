@@ -24,6 +24,7 @@ def extract_audio_bytes(payload=None, body=b"", content_type: str = "application
                 try:
                     return base64.b64decode(audio_field, validate=True)
                 except Exception as exc:
+                    log.error(f"Exception decoding audio: {exc}")
                     raise ValueError("Field 'audio' must be valid base64-encoded bytes") from exc
             if isinstance(audio_field, (bytes, bytearray)):
                 return bytes(audio_field)

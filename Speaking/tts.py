@@ -34,7 +34,11 @@ def generate_speech(text, model, lang):
     start_time = time.time()
 
     try:
-        audio = model.generate(text=cleaned_text)
+        voice_instruct = os.environ.get("TTS_VOICE_INSTRUCT", None)
+        if voice_instruct:
+            audio = model.generate(text=cleaned_text, instruct=f"{voice_instruct}")
+        else:
+            audio = model.generate(text=cleaned_text)
         
         sf.write(str(output_path), audio[0], 24000)
 

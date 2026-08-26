@@ -2,9 +2,12 @@ import re
 import os
 import json
 import base64
+import threading
 from pathlib import Path
 from llama_cpp import Llama
 from logger import get_logger
+
+llm_lock = threading.Lock()
 from prompts import get_image_prompt, get_inactive_posture_prompt, get_stt_prompt
 from llama_cpp.llama_chat_format import Gemma4ChatHandler 
 
@@ -43,21 +46,22 @@ def process_image(llm, image_path):
     
     resident_base64_image = encode_image(Path(__file__).resolve().parent.parent / resident_image_path)
 
-    response = llm.create_chat_completion(
-        messages=[
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": "Resident photo:"},
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{resident_base64_image}"}},
-                    {"type": "text", "text": "Camera Image:"},
-                    {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}},
-                    {"type": "text", "text": get_image_prompt()}                ]
-            }
-        ],
-        temperature=0.1,
-        response_format=None
-    )
+    with llm_lock:
+        response = llm.create_chat_completion(
+            messages=[
+                {
+                    "role": "user",
+                    "content": [
+                        {"type": "text", "text": "Resident photo:"},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{resident_base64_image}"}},
+                        {"type": "text", "text": "Camera Image:"},
+                        {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{base64_image}"}},
+                        {"type": "text", "text": get_image_prompt()}                ]
+                }
+            ],
+            temperature=0.1,
+            response_format=None
+        )
 
     return response["choices"][0]["message"]["content"]
 
@@ -101,32 +105,34 @@ def process_inactive_sequence(llm, image_paths):
         "text": get_inactive_posture_prompt()
         })
 
-    response = llm.create_chat_completion(
-        messages=[
-            {
-                "role": "user",
-                "content": content
-            }
-        ],
-        temperature=0.1,
-        response_format=None
-    )
+    with llm_lock:
+        response = llm.create_chat_completion(
+            messages=[
+                {
+                    "role": "user",
+                    "content": content
+                }
+            ],
+            temperature=0.1,
+            response_format=None
+        )
 
     return response["choices"][0]["message"]["content"]
 
 def process_stt_text(llm, text):
     prompt = get_stt_prompt(text)
     
-    response = llm.create_chat_completion(
-        messages=[
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ],
-        temperature=0.1,
-        response_format=None
-    )
+    with llm_lock:
+        response = llm.create_chat_completion(
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            temperature=0.1,
+            response_format=None
+        )
     
     response_str = response["choices"][0]["message"]["content"]
     

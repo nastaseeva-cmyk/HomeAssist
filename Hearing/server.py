@@ -63,7 +63,8 @@ async def stt_endpoint(request: Request, file: UploadFile = File(...)):
             parsed = urllib.parse.urlparse(original_url)
             rewritten_url = parsed._replace(netloc=f"{ip_only}:{parsed.port}").geturl()
             response["audio_url"] = rewritten_url
-        except Exception:
+        except Exception as e:
+            log.error(f"Exception parsing audio url: {e}")
             response["audio_url"] = original_url
 
     return response
