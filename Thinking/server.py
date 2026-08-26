@@ -1,15 +1,15 @@
 import os
 import time
 import uvicorn
-from db import init_db, write_event, write_conversation
-from cortex import act
+from calls import tts
 from pathlib import Path
 from logger import get_logger
 from dotenv import load_dotenv
 from pydantic import BaseModel
+from cortex import act, analyze_inactive_posture
+from db import init_db, write_event, write_conversation
 from fastapi import FastAPI, Request, HTTPException, UploadFile, File, BackgroundTasks
-from llm import load_model, process_image, parse_json_response, process_inactive_sequence, process_stt_text
-from calls import tts
+from llm import load_model, process_image, parse_json_response, process_stt_text
 
 
 log = get_logger("thinking")
@@ -27,37 +27,6 @@ class STTRequest(BaseModel):
     lang: str
     text: str
 
-def analyze_inactive_posture():
-    interval = int(os.environ.get("INACTIVITY_INTERVAL_SECONDS", 7200))
-    images = sorted(IMAGE_DIR.glob("capture_*.jpg"), key=os.path.getmtime, reverse=True)
-    
-    if len(images) >= 3:
-        newest = images[0]
-        newest_time = os.path.getmtime(newest)
-
-        target_mid = newest_time - (interval / 2)
-        target_old = newest_time - interval
-
-        def get_closest(target_time, img_list):
-            return min(img_list, key=lambda x: abs(os.path.getmtime(x) - target_time))
-
-        oldest = get_closest(target_old, images)
-        mid = get_closest(target_mid, images)
-        
-        selected_images = [oldest, mid, newest]
-        
-        # Ensure they are distinct images to prevent checking the same image 3 times
-        if len(set(selected_images)) == 3:
-            log.info(f"Starting inactive posture inference across {interval} seconds...")
-            start_time = time.time()
-            result = process_inactive_sequence(model, [str(img) for img in selected_images])
-            elapsed_time = time.time() - start_time
-            
-            log.info(f"inactive_posture_inference_time: {elapsed_time:.2f}s")
-            log.info(f"inactive_posture_result: {result}")
-            
-            if "RESULT: YES" in result.upper():
-                write_event("INACTIVE_POSTURE_DETECTED", f"Detected across {selected_images[0].name}, {selected_images[1].name}, {selected_images[2].name}")
 
 @app.post("/detection")
 async def detection_req(

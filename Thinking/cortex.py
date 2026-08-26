@@ -1,9 +1,48 @@
+import os
+import time
 from calls import tts
+from pathlib import Path
 from logger import get_logger
-from db import write_conversation, get_seconds_since_last_conversation, write_routine_log
-import datetime
+from llm import process_inactive_sequence
+from db import write_conversation, get_seconds_since_last_conversation, write_routine_log, write_event, write_conversation
+
 
 log = get_logger("thinking")
+
+IMAGE_DIR = Path(__file__).resolve().parent.parent / "SharedData/images"
+IMAGE_DIR.mkdir(parents=True, exist_ok=True)
+
+def analyze_inactive_posture():
+    interval = int(os.environ.get("INACTIVITY_INTERVAL_SECONDS", 7200))
+    images = sorted(IMAGE_DIR.glob("capture_*.jpg"), key=os.path.getmtime, reverse=True)
+    
+    if len(images) >= 3:
+        newest = images[0]
+        newest_time = os.path.getmtime(newest)
+
+        target_mid = newest_time - (interval / 2)
+        target_old = newest_time - interval
+
+        def get_closest(target_time, img_list):
+            return min(img_list, key=lambda x: abs(os.path.getmtime(x) - target_time))
+
+        oldest = get_closest(target_old, images)
+        mid = get_closest(target_mid, images)
+        
+        selected_images = [oldest, mid, newest]
+        
+        # Ensure they are distinct images to prevent checking the same image 3 times
+        if len(set(selected_images)) == 3:
+            log.info(f"Starting inactive posture inference across {interval} seconds...")
+            start_time = time.time()
+            result = process_inactive_sequence(model, [str(img) for img in selected_images])
+            elapsed_time = time.time() - start_time
+            
+            log.info(f"inactive_posture_inference_time: {elapsed_time:.2f}s")
+            log.info(f"inactive_posture_result: {result}")
+            
+            if "RESULT: YES" in result.upper():
+                write_event("INACTIVE_POSTURE_DETECTED", f"Detected across {selected_images[0].name}, {selected_images[1].name}, {selected_images[2].name}")
 
 async def act(client_host, filename, resident_in_picture, multiple_people, status, spoken_message):
     write_routine_log(resident_in_picture, multiple_people, status)
