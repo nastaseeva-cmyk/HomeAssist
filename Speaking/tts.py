@@ -1,5 +1,6 @@
 import os
 import time
+import uuid
 import hashlib
 import soundfile as sf
 from pathlib import Path
@@ -30,17 +31,19 @@ def generate_speech(text, model, lang):
 
     token = hashlib.sha1(cleaned_text.encode("utf-8")).hexdigest()
     output_path = AUDIO_DIR / f"{token}.wav"
+    temp_output_path = AUDIO_DIR / f"{token}_{uuid.uuid4().hex}.wav"
 
     start_time = time.time()
 
     try:
         voice_instruct = os.environ.get("TTS_VOICE_INSTRUCT", None)
         if voice_instruct:
-            audio = model.generate(text=cleaned_text, instruct=f"{voice_instruct}")
+            audio = model.generate(text=cleaned_text, instruct=voice_instruct)
         else:
             audio = model.generate(text=cleaned_text)
         
-        sf.write(str(output_path), audio[0], 24000)
+        sf.write(str(temp_output_path), audio[0], 24000)
+        os.replace(str(temp_output_path), str(output_path))
 
         elapsed_time = time.time() - start_time        
         log.info(f"Generated speech -> {output_path} (tts_time: {elapsed_time:.2f}s)")        

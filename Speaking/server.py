@@ -52,7 +52,12 @@ async def tts_endpoint(request: Request, payload: TTSRequest):
 
 @app.get("/audio/{filename}")
 async def get_audio(filename: str):
-    audio_path = AUDIO_DIR / filename
+    audio_path = (AUDIO_DIR / filename).resolve()
+    
+    if not str(audio_path).startswith(str(AUDIO_DIR.resolve())):
+        log.error(f"403 Forbidden: Path traversal attempt: {filename}")
+        raise HTTPException(status_code=403, detail="Forbidden")
+
     if audio_path.exists() and audio_path.is_file():
         return FileResponse(audio_path, media_type="audio/wav", filename=filename)
     

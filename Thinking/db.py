@@ -20,9 +20,14 @@ def get_db_path():
 
     return Path(__file__).resolve().parent.parent / db_path
 
+def get_connection():
+    conn = sqlite3.connect(get_db_path(), timeout=20.0)
+    conn.execute("PRAGMA journal_mode=WAL")
+    return conn
+
 def init_db():
 
-    with sqlite3.connect(get_db_path()) as conn:
+    with get_connection() as conn:
         conn.execute("""
             CREATE TABLE IF NOT EXISTS conversations (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -81,7 +86,7 @@ def write_conversation(entry):
     datestamp = datetime.datetime.now().strftime("%Y-%m-%d")
     timestamp = datetime.datetime.now().strftime("%H:%M:%S")
     
-    with sqlite3.connect(get_db_path()) as conn:
+    with get_connection() as conn:
         conn.execute(
             "INSERT INTO conversations (datestamp, timestamp, entry) VALUES (?, ?, ?)",
             (datestamp, timestamp, entry)
@@ -91,7 +96,7 @@ def write_routine_log(resident_in_picture, multiple_people, status, location="Un
     datestamp = time.strftime("%Y-%m-%d")
     timestamp = time.strftime("%H:%M:%S")
 
-    with sqlite3.connect(get_db_path()) as conn:
+    with get_connection() as conn:
         conn.execute(
             """
             INSERT INTO routine_logs (datestamp, timestamp, resident_in_picture, multiple_people, status, location)
@@ -104,7 +109,7 @@ def write_event(event_type, details):
     datestamp = datetime.datetime.now().strftime("%Y-%m-%d")
     timestamp = datetime.datetime.now().strftime("%H:%M:%S")
     
-    with sqlite3.connect(get_db_path()) as conn:
+    with get_connection() as conn:
         conn.execute(
             "INSERT INTO events (datestamp, timestamp, event_type, details) VALUES (?, ?, ?, ?)",
             (datestamp, timestamp, event_type, details)
@@ -113,7 +118,7 @@ def write_event(event_type, details):
 def get_conversations():
     today = datetime.datetime.now().strftime("%Y-%m-%d")
     
-    with sqlite3.connect(get_db_path()) as conn:
+    with get_connection() as conn:
         cursor = conn.execute(
             "SELECT timestamp, entry FROM conversations WHERE datestamp = ? ORDER BY id DESC LIMIT 3", 
             (today,)
@@ -127,7 +132,7 @@ def get_conversations():
     return "\n".join([f"{row[0]} - {row[1]}" for row in rows])
 
 def get_seconds_since_last_conversation():
-    with sqlite3.connect(get_db_path()) as conn:
+    with get_connection() as conn:
         cursor = conn.execute(
             "SELECT datestamp, timestamp FROM conversations ORDER BY id DESC LIMIT 1"
         )
@@ -147,7 +152,7 @@ def get_seconds_since_last_conversation():
         return 999999
 
 def get_all_historical_timestamps():
-    with sqlite3.connect(get_db_path()) as conn:
+    with get_connection() as conn:
         cursor = conn.execute(
             "SELECT datestamp, timestamp FROM routine_logs WHERE resident_in_picture = 'yes'"
         )
@@ -164,7 +169,7 @@ def get_all_historical_timestamps():
     return datetimes
 
 def get_hours_since_resident_last_seen():
-    with sqlite3.connect(get_db_path()) as conn:
+    with get_connection() as conn:
         cursor = conn.execute(
             "SELECT datestamp, timestamp FROM routine_logs WHERE resident_in_picture = 'yes' ORDER BY id DESC LIMIT 1"
         )
@@ -182,7 +187,7 @@ def get_hours_since_resident_last_seen():
         return -1.0
 
 def get_distinct_locations():
-    with sqlite3.connect(get_db_path()) as conn:
+    with get_connection() as conn:
         cursor = conn.execute(
             "SELECT DISTINCT location FROM routine_logs WHERE resident_in_picture = 'yes' AND location IS NOT NULL AND location != 'Unknown'"
         )
@@ -191,7 +196,7 @@ def get_distinct_locations():
     return [row[0] for row in rows]
 
 def get_hours_since_resident_last_seen_at(location):
-    with sqlite3.connect(get_db_path()) as conn:
+    with get_connection() as conn:
         cursor = conn.execute(
             "SELECT datestamp, timestamp FROM routine_logs WHERE resident_in_picture = 'yes' AND location = ? ORDER BY id DESC LIMIT 1",
             (location,)
@@ -210,7 +215,7 @@ def get_hours_since_resident_last_seen_at(location):
         return -1.0
 
 def get_all_historical_timestamps_for(location):
-    with sqlite3.connect(get_db_path()) as conn:
+    with get_connection() as conn:
         cursor = conn.execute(
             "SELECT datestamp, timestamp FROM routine_logs WHERE resident_in_picture = 'yes' AND location = ?",
             (location,)
@@ -232,7 +237,7 @@ VISUAL_SOURCES = {"detection", "inactive_posture", "routine_anomaly"}
 def update_current_status(location, status, source, detail=None, audio_url=None):
     updated_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    with sqlite3.connect(get_db_path()) as conn:
+    with get_connection() as conn:
         cursor = conn.execute("SELECT status, danger_sources FROM current_status WHERE location = ?", (location,))
         row = cursor.fetchone()
 
@@ -275,7 +280,7 @@ def update_current_status(location, status, source, detail=None, audio_url=None)
         conn.commit()
 
 def get_current_status(location, clear_audio=True):
-    with sqlite3.connect(get_db_path()) as conn:
+    with get_connection() as conn:
         cursor = conn.execute(
             "SELECT status, source, detail, audio_url, updated_at, danger_sources FROM current_status WHERE location = ?",
             (location,)

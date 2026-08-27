@@ -1,6 +1,7 @@
 import os
 import time
 import asyncio
+import datetime
 from calls import tts
 from pathlib import Path
 from logger import get_logger
@@ -127,8 +128,6 @@ async def act(client_host, filename, resident_in_picture, multiple_people, statu
         }
 
 async def check_routine_anomaly_for(model, location):
-    import asyncio
-    import datetime
     from anomaly_model import predict_anomaly
     
     now = datetime.datetime.now()
@@ -182,8 +181,6 @@ async def check_routine_anomaly_for(model, location):
                               f"Missing for {hours_missing:.1f}h", audio_url)
 
 async def check_routine_anomaly(model):
-    import datetime
-    
     log.info("Starting per-location routine anomaly check...")
     
     now = datetime.datetime.now()

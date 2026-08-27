@@ -116,7 +116,7 @@ The LLM evaluates what the resident said and determines:
 - **Status update**: Does the speech indicate danger? (e.g., *"I fell"*, *"I'm not feeling well"*)
 - **Spoken response**: A natural, empathetic reply in the resident's configured language.
 
-If danger is detected via speech, an `STT_DANGER_DETECTED` event is written to the database. Only speech in the configured `RESIDENT_LANGUAGE` with 20+ characters is processed (filters out noise and short utterances).
+If danger is detected via speech, an `STT_DANGER_DETECTED` event is written to the database. Only speech in the configured `RESIDENT_LANGUAGE` with 10+ characters is processed (filters out noise and short utterances).
 
 ### 5. Conversation Cooldown (1-hour throttle)
 
@@ -173,3 +173,32 @@ If you plan using docker-compose - put all the configs into a single config.env 
 docker compose up --build
 ```
 At this point, the application backend should be up and running locally. You can install the mobile app and start testing.
+
+
+
+```mermaid
+graph LR
+    subgraph Edge Device
+        M["Mobile App<br/>(Kotlin/Android)"]
+    end
+
+    subgraph Backend - Docker Compose
+        T["Thinking Service<br/>(FastAPI + Gemma 4 LLM)"]
+        S["Speaking Service<br/>(FastAPI + OmniVoice TTS)"]
+        H["Hearing Service<br/>(FastAPI + Whisper STT)"]
+    end
+
+    M -- "POST /detection<br/>(camera frames)" --> T
+    M -- "POST /stt<br/>(voice audio)" --> H
+    M -- "GET /status<br/>(polling)" --> T
+    H -- "POST /stt<br/>(transcribed text)" --> T
+    T -- "POST /tts<br/>(text to speak)" --> S
+    S -- "GET /audio/{file}<br/>(audio stream)" --> M
+```
+
+| Component | Tech Stack | Lines | Role |
+|-----------|-----------|-------|------|
+| **Thinking** | Python, FastAPI, llama-cpp, SQLite, IsolationForest | 780 | Central brain — LLM inference, anomaly detection, state management |
+| **Speaking** | Python, FastAPI, OmniVoice, soundfile | 170 | Text-to-Speech synthesis |
+| **Hearing** | Python, FastAPI, faster-whisper | 200 | Speech-to-Text transcription |
+| **Mobile** | Kotlin, Jetpack Compose, CameraX, MLKit, TFLite, Silero VAD | 1,267 | Android edge client — vision, voice, UI |
