@@ -1,4 +1,5 @@
 import os
+import asyncio
 import uvicorn
 from pathlib import Path
 from logger import get_logger
@@ -33,7 +34,7 @@ async def tts_endpoint(request: Request, payload: TTSRequest):
         raise HTTPException(status_code=400, detail="Field 'text' must be a non-empty string")
 
     resident_language = os.environ.get("RESIDENT_LANGUAGE", None)
-    output_path = generate_speech(payload.text, model, resident_language)
+    output_path = await asyncio.to_thread(generate_speech, payload.text, model, resident_language)
 
     scheme = request.url.scheme
     host_header = request.headers.get("host")

@@ -157,8 +157,8 @@ RESIDENT_LANGUAGE = "en"
 ```env
 HEARING_HOST = "0.0.0.0"
 HEARING_PORT = 8000
-THINKING_STT_HOST = "thinking-service"
-THINKING_STT_PORT = 7000
+CORTEX_STT_HOST = "thinking-service"
+CORTEX_STT_PORT = 7000
 ```
 
 ---

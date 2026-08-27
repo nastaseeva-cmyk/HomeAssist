@@ -1,3 +1,4 @@
+import asyncio
 import os
 import time
 from calls import tts
@@ -12,7 +13,7 @@ log = get_logger("thinking")
 IMAGE_DIR = Path(__file__).resolve().parent.parent / "SharedData/images"
 IMAGE_DIR.mkdir(parents=True, exist_ok=True)
 
-def analyze_inactive_posture(model, location="Unknown"):
+async def analyze_inactive_posture(model, location="Unknown"):
     interval = int(os.environ.get("INACTIVITY_INTERVAL_SECONDS", 7200))
     
     location_dir = IMAGE_DIR / location
@@ -40,7 +41,7 @@ def analyze_inactive_posture(model, location="Unknown"):
         if len(set(selected_images)) == 3:
             log.info(f"Starting inactive posture inference for '{location}' across {interval} seconds...")
             start_time = time.time()
-            result = process_inactive_sequence(model, [str(img) for img in selected_images])
+            result = await asyncio.to_thread(process_inactive_sequence, model, [str(img) for img in selected_images])
             elapsed_time = time.time() - start_time
             
             log.info(f"inactive_posture_inference_time: {elapsed_time:.2f}s (location: {location})")

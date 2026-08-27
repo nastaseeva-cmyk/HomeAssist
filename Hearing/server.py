@@ -1,3 +1,4 @@
+import asyncio
 import os
 import time
 import uvicorn
@@ -39,7 +40,7 @@ async def stt_endpoint(request: Request, location: str = Form("Unknown"), file: 
     file_path.write_bytes(audio_bytes)
 
     start_time = time.time()
-    text, lang = transcribe_audio(audio_bytes, model=model)
+    text, lang = await asyncio.to_thread(transcribe_audio, audio_bytes, model)
     elapsed_time = time.time() - start_time
     log.info(f"stt_time: {elapsed_time:.2f}s / {lang}:{text}")
     

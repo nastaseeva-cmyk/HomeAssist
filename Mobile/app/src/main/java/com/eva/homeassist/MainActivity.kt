@@ -117,7 +117,7 @@ fun MainScreen() {
                                 val audioUrl = result.second
                                 val status = result.third
                                 if (status != null) residentStatus = status
-                                
+
                                 if (text.isNotBlank()) {
                                     aiMessage = "You said: $text"
                                 }

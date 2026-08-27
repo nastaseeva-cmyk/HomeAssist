@@ -59,7 +59,7 @@ async def detection_req(
 
     # Process the image with the LLM
     start_time = time.time()
-    inference_result_str = process_image(model, str(filename))
+    inference_result_str = await asyncio.to_thread(process_image, model, str(filename))
     elapsed_time = time.time() - start_time        
     log.info(f"llm_time: {elapsed_time:.2f}s")
 
@@ -70,7 +70,6 @@ async def detection_req(
 
     # Act based on the inference result
     client_host = request.headers.get("host", "127.0.0.1")
-    write_routine_log(resident_in_picture, multiple_people, status, location)
     response_payload = await act(client_host, filename, resident_in_picture, multiple_people, status, greeting, location)
 
     current = get_current_status(location, clear_audio=False)
@@ -91,7 +90,7 @@ async def stt_req(payload: STTRequest, request: Request):
     
     # 20 characters minimum length
     if payload.lang == resident_language and len(payload.text.strip()) >= 20:
-        is_addressing, status_update, spoken_response = process_stt_text(model, payload.text)
+        is_addressing, status_update, spoken_response = await asyncio.to_thread(process_stt_text, model, payload.text)
         
         if is_addressing.lower() == "yes" and spoken_response:
             client_host = request.headers.get("host", "127.0.0.1")
