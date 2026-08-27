@@ -1,6 +1,7 @@
 import os
 import time
 import uvicorn
+import urllib.parse
 from pathlib import Path
 from calls import cortex
 from logger import get_logger
@@ -51,21 +52,24 @@ async def stt_endpoint(request: Request, location: str = Form("Unknown"), file: 
         "model": "large-v3",
     }
     
-    if cortex_response and "audio_url" in cortex_response and cortex_response["audio_url"]:
-        original_url = cortex_response["audio_url"]
-        # Rewrite the URL host to match the external host that the mobile app used
-        client_host = request.headers.get("host", "127.0.0.1")
-        ip_only = client_host.split(":")[0]
-        # Assuming the tts service is at the same IP, port 9001 (based on thinking/calls.py)
-        # Parse the port from the original URL if needed, but it's usually 9001
-        try:
-            import urllib.parse
-            parsed = urllib.parse.urlparse(original_url)
-            rewritten_url = parsed._replace(netloc=f"{ip_only}:{parsed.port}").geturl()
-            response["audio_url"] = rewritten_url
-        except Exception as e:
-            log.error(f"Exception parsing audio url: {e}")
-            response["audio_url"] = original_url
+    if cortex_response:
+        if "resident_status" in cortex_response:
+            response["resident_status"] = cortex_response["resident_status"]
+            
+        if "audio_url" in cortex_response and cortex_response["audio_url"]:
+            original_url = cortex_response["audio_url"]
+            # Rewrite the URL host to match the external host that the mobile app used
+            client_host = request.headers.get("host", "127.0.0.1")
+            ip_only = client_host.split(":")[0]
+            # Assuming the tts service is at the same IP, port 9001 (based on thinking/calls.py)
+            # Parse the port from the original URL if needed, but it's usually 9001
+            try:
+                parsed = urllib.parse.urlparse(original_url)
+                rewritten_url = parsed._replace(netloc=f"{ip_only}:{parsed.port}").geturl()
+                response["audio_url"] = rewritten_url
+            except Exception as e:
+                log.error(f"Exception parsing audio url: {e}")
+                response["audio_url"] = original_url
 
     return response
 

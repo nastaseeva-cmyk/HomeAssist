@@ -32,7 +32,7 @@ private val httpClient by lazy {
 
 fun uploadImageToBackend(
     bitmap: Bitmap,
-    onResult: (String, String?) -> Unit
+    onResult: (String, String?, String?) -> Unit
 ) {
     CoroutineScope(Dispatchers.IO).launch {
         try {
@@ -61,22 +61,44 @@ fun uploadImageToBackend(
                 if (response.isSuccessful) {
                     val responseString = response.body?.string() ?: "{}"
                     val jsonObject = JSONObject(responseString)
-                    val inferenceResult = jsonObject.optString("inference", "Got no text.")
+                    val inferenceObj = jsonObject.optJSONObject("inference")
+                    val inferenceResult = inferenceObj?.toString() ?: "Got no text."
                     val audioUrl = jsonObject.optString("audio_url", "").takeIf { it.isNotEmpty() }
+                    val residentStatus = inferenceObj?.optString("status")
 
                     withContext(Dispatchers.Main) {
-                        onResult(inferenceResult, audioUrl)
+                        onResult(inferenceResult, audioUrl, residentStatus)
                     }
                 } else {
                     withContext(Dispatchers.Main) {
-                        onResult("Server error: ${response.code}", null)
+                        onResult("Server error: ${response.code}", null, null)
                     }
                 }
             }
         } catch (e: Exception) {
             withContext(Dispatchers.Main) {
-                onResult("Network error: ${e.message}", null)
+                onResult("Network error: ${e.message}", null, null)
             }
         }
     }
+}
+
+data class StatusData(val status: String?, val audioUrl: String?)
+
+suspend fun pollStatus(statusUrl: String, location: String): StatusData? = withContext(Dispatchers.IO) {
+    try {
+        val url = "$statusUrl?location=$location"
+        val request = Request.Builder().url(url).get().build()
+        httpClient.newCall(request).execute().use { response ->
+            if (response.isSuccessful) {
+                val json = JSONObject(response.body?.string() ?: "{}")
+                val status = json.optString("status").takeIf { it.isNotEmpty() && it != "unknown" }
+                val audioUrl = json.optString("audio_url").takeIf { it.isNotEmpty() }
+                return@withContext StatusData(status, audioUrl)
+            }
+        }
+    } catch (e: Exception) {
+        // Ignore polling errors
+    }
+    return@withContext null
 }

@@ -59,9 +59,11 @@ def get_stt_prompt(text):
 You are an AI assistant named '{assistant_name}'. 
 The resident just said: "{text}"
 
-Analyze the text. Are they talking to you? Are they stating their status (e.g., 'I am ok', 'I am not feeling well') or just engaging in short conversation?
-If they are addressing you or stating a status, respond naturally and empathetically in '{resident_language}'. Keep it very short.
-If they are clearly talking to someone else or the text is random noise, leave the response empty.
+Analyze the text. Are they talking to you? You should ONLY consider them to be addressing you if they explicitly use your name ('{assistant_name}') or if they are stating a medical/danger status (e.g., 'I am not feeling well') or confirming they are okay. 
+If they are just talking generally, or if your name is missing, assume they are talking to someone else in the room.
+
+If they are explicitly addressing you by name, stating a critical status, or confirming they are OK, respond naturally and empathetically in '{resident_language}'. Keep it very short.
+If they are clearly talking to someone else, your name is missing, or the text is random noise, return "is_addressing_assistant": "no" and leave the response empty.
 
 Return ONLY a JSON object:
 {{

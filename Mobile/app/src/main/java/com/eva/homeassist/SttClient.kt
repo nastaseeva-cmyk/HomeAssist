@@ -1,5 +1,6 @@
 package com.eva.homeassist
 
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -56,7 +57,7 @@ private val sharedSttHttpClient by lazy {
 }
 
 class SttClient(private val sttUrl: String) {
-    suspend fun transcribeAudio(audioData: ByteArray): Pair<String, String?>? = withContext(Dispatchers.IO) {
+    suspend fun transcribeAudio(audioData: ByteArray): Triple<String, String?, String?>? = withContext(Dispatchers.IO) {
         try {
             val wavData = addWavHeader(audioData, 16000)
 
@@ -83,8 +84,9 @@ class SttClient(private val sttUrl: String) {
                     if (json.has("text")) {
                         val text = json.getString("text")
                         val audioUrl = if (json.has("audio_url") && !json.isNull("audio_url")) json.getString("audio_url") else null
+                        val residentStatus = if (json.has("resident_status") && !json.isNull("resident_status")) json.getString("resident_status") else null
 
-                        return@withContext Pair(text, audioUrl)
+                        return@withContext Triple(text, audioUrl, residentStatus)
                     }
                 }
             }

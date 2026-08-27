@@ -30,6 +30,9 @@ android {
         val sttUrl = localProperties.getProperty("STT_URL") ?: "http://127.0.0.1:8000"
         buildConfigField("String", "STT_URL", "\"$sttUrl\"")
 
+        val statusUrl = localProperties.getProperty("STATUS_URL") ?: "http://127.0.0.1:7000/status"
+        buildConfigField("String", "STATUS_URL", "\"$statusUrl\"")
+
         val locationName = localProperties.getProperty("LOCATION_NAME") ?: "Unknown"
         buildConfigField("String", "LOCATION_NAME", "\"$locationName\"")
 

@@ -58,6 +58,16 @@ def init_db():
                 details TEXT
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS current_status (
+                location TEXT PRIMARY KEY,
+                status TEXT NOT NULL DEFAULT 'unknown',
+                source TEXT,
+                detail TEXT,
+                audio_url TEXT,
+                updated_at TEXT NOT NULL
+            )
+        """)
 
 
 def write_conversation(entry):
@@ -210,3 +220,65 @@ def get_all_historical_timestamps_for(location):
 
     return datetimes
 
+def update_current_status(location, status, source, detail=None, audio_url=None):
+    updated_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    with sqlite3.connect(get_db_path()) as conn:
+        cursor = conn.execute("SELECT status, source FROM current_status WHERE location = ?", (location,))
+        row = cursor.fetchone()
+        
+        if row:
+            current_status = row[0]
+            current_source = row[1]
+            
+            if current_status == 'danger' and status != 'danger':
+                if source == 'stt':
+                    pass # Voice can always clear danger
+                elif current_source == 'routine_anomaly' and source == 'detection' and status == 'ok':
+                    pass # Finding the missing person clears routine anomaly
+                else:
+                    return # Block the overwrite
+
+        conn.execute(
+            """
+            INSERT INTO current_status (location, status, source, detail, audio_url, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            ON CONFLICT(location) DO UPDATE SET
+                status = excluded.status,
+                source = excluded.source,
+                detail = excluded.detail,
+                audio_url = COALESCE(excluded.audio_url, current_status.audio_url),
+                updated_at = excluded.updated_at
+            """,
+            (location, status, source, detail, audio_url, updated_at)
+        )
+        conn.commit()
+
+def get_current_status(location, clear_audio=True):
+    with sqlite3.connect(get_db_path()) as conn:
+        cursor = conn.execute(
+            "SELECT status, source, detail, audio_url, updated_at FROM current_status WHERE location = ?",
+            (location,)
+        )
+        row = cursor.fetchone()
+
+        if not row:
+            return None
+
+        result = {
+            "status": row[0],
+            "source": row[1],
+            "detail": row[2],
+            "audio_url": row[3],
+            "updated_at": row[4]
+        }
+
+        # Clear audio_url after read so it only plays once
+        if row[3] and clear_audio:
+            conn.execute(
+                "UPDATE current_status SET audio_url = NULL WHERE location = ?",
+                (location,)
+            )
+            conn.commit()
+
+        return result

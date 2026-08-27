@@ -4,7 +4,7 @@ from calls import tts
 from pathlib import Path
 from logger import get_logger
 from llm import process_inactive_sequence, process_routine_analysis
-from db import get_seconds_since_last_conversation, write_routine_log, write_event, write_conversation, get_all_historical_timestamps, get_hours_since_resident_last_seen, get_distinct_locations, get_hours_since_resident_last_seen_at, get_all_historical_timestamps_for
+from db import get_seconds_since_last_conversation, write_routine_log, write_event, write_conversation, get_all_historical_timestamps, get_hours_since_resident_last_seen, get_distinct_locations, get_hours_since_resident_last_seen_at, get_all_historical_timestamps_for, update_current_status
 
 
 log = get_logger("thinking")
@@ -48,10 +48,12 @@ def analyze_inactive_posture(model, location="Unknown"):
             
             if "RESULT: YES" in result.upper():
                 write_event("INACTIVE_POSTURE_DETECTED", f"Detected at '{location}' across {selected_images[0].name}, {selected_images[1].name}, {selected_images[2].name}")
+                update_current_status(location, "danger", "inactive_posture", "Dangerous inactive posture detected")
 
 async def act(client_host, filename, resident_in_picture, multiple_people, status, greeting, location="Unknown"):
     log.info(f"Resident: {resident_in_picture}, Multiple: {multiple_people}, Status: {status}")
     write_routine_log(resident_in_picture, multiple_people, status, location)
+    update_current_status(location, status, "detection", greeting)
 
     # SITUATION: Resident is in the picture, status is "ok", and there is only one person detected
     # ACTION: Generate a conversation with corresponding TTS and return the audio URL along with the inference results
@@ -170,7 +172,9 @@ async def check_routine_anomaly_for(model, location):
         write_event("ROUTINE_ANOMALY_DETECTED", f"Resident missing from '{location}' for {hours_missing:.1f}h. Message: {spoken_message}")
         write_conversation(spoken_message)
         client_host = os.environ.get("THINKING_HOST", "127.0.0.1")
-        await tts(client_host, spoken_message)
+        audio_url = await tts(client_host, spoken_message)
+        update_current_status(location, "danger", "routine_anomaly",
+                              f"Missing for {hours_missing:.1f}h", audio_url)
 
 async def check_routine_anomaly(model):
     import datetime

@@ -8,7 +8,7 @@ from logger import get_logger
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from cortex import act, analyze_inactive_posture, check_routine_anomaly
-from db import init_db, write_event, write_conversation, write_routine_log
+from db import init_db, write_event, write_conversation, write_routine_log, update_current_status, get_current_status
 from llm import load_model, process_image, parse_json_response, process_stt_text
 from fastapi import FastAPI, Request, HTTPException, UploadFile, File, BackgroundTasks, Form
 
@@ -73,6 +73,10 @@ async def detection_req(
     write_routine_log(resident_in_picture, multiple_people, status, location)
     response_payload = await act(client_host, filename, resident_in_picture, multiple_people, status, greeting, location)
 
+    current = get_current_status(location, clear_audio=False)
+    if current:
+        response_payload["inference"]["status"] = current["status"]
+
     background_tasks.add_task(analyze_inactive_posture, model, location)
 
     return response_payload
@@ -83,6 +87,8 @@ async def stt_req(payload: STTRequest, request: Request):
     
     resident_language = os.environ.get("RESIDENT_LANGUAGE", "en")
     
+    audio_url = None
+    
     # 20 characters minimum length
     if payload.lang == resident_language and len(payload.text.strip()) >= 20:
         is_addressing, status_update, spoken_response = process_stt_text(model, payload.text)
@@ -90,19 +96,57 @@ async def stt_req(payload: STTRequest, request: Request):
         if is_addressing.lower() == "yes" and spoken_response:
             client_host = request.headers.get("host", "127.0.0.1")
             audio_url = await tts(client_host, spoken_response)
+
+            # Store both sides of the dialogue for conversation history context
+            write_conversation(f"Resident: {payload.text}")
             write_conversation(spoken_response)
-            
+
+            # Voice interaction confirms resident is present and responsive
+            write_routine_log("yes", "unknown", status_update, payload.location)
+
+        # Process the status update even if we didn't generate a TTS response
+        if status_update.lower() in ["danger", "ok"]:
             if status_update.lower() == "danger":
                 write_event("STT_DANGER_DETECTED", f"Resident reported danger: {payload.text}")
+                update_current_status(payload.location, "danger", "stt", f"Voice: {payload.text[:100]}")
+            elif status_update.lower() == "ok":
+                write_event("STT_STATUS_OK", f"Resident confirmed OK via voice: {payload.text}")
+                update_current_status(payload.location, "ok", "stt", f"Voice: {payload.text[:100]}")
                 
-            return {
-                "status": "done", 
-                "lang": payload.lang, 
-                "text": payload.text,
-                "audio_url": audio_url
-            }
+    # Always return the current DB status so the mobile app stays in sync
+    current = get_current_status(payload.location, clear_audio=False)
+    final_status = current["status"] if current else None
 
-    return {"status": "done", "lang": payload.lang, "text": payload.text}
+    response_payload = {"status": "done", "lang": payload.lang, "text": payload.text}
+
+    if final_status:
+        response_payload["resident_status"] = final_status
+    if audio_url:
+        response_payload["audio_url"] = audio_url
+
+    log.info(f"/stt response: {response_payload}")
+    
+    return response_payload
+
+@app.get("/status")
+async def get_status_req(request: Request, location: str = "Unknown"):
+    status_data = get_current_status(location)
+    if not status_data:
+        return {"status": "unknown", "source": None, "audio_url": None}
+
+    # Rewrite audio_url host to be reachable by the mobile client
+    audio_url = status_data.get("audio_url")
+    if audio_url:
+        try:
+            import urllib.parse
+            client_host = request.headers.get("host", "127.0.0.1")
+            ip_only = client_host.split(":")[0]
+            parsed = urllib.parse.urlparse(audio_url)
+            status_data["audio_url"] = parsed._replace(netloc=f"{ip_only}:{parsed.port}").geturl()
+        except Exception as e:
+            log.error(f"Error rewriting status audio_url: {e}")
+
+    return status_data
 
 async def routine_analyzer_loop():
     await asyncio.sleep(60)

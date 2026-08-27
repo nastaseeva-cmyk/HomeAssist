@@ -43,7 +43,7 @@ data class DetectedObjectState(
 fun FrontCameraPreview(
     modifier: Modifier = Modifier,
     onPersonDetected: (Offset, Boolean, Float) -> Unit,
-    onInferenceResult: (String, String?) -> Unit,
+    onInferenceResult: (String, String?, String?) -> Unit,
     onCooldownActivated: (Long) -> Unit,
     onUploadStateChanged: (Boolean) -> Unit
 ) {
@@ -124,8 +124,8 @@ fun FrontCameraPreview(
                                 if (!uploadState.isUploading && currentTime >= uploadState.cooldownUntil) {
                                     uploadState.isUploading = true
                                     onUploadStateChanged(true)
-                                    uploadImageToBackend(rotatedBitmap) { resultText, audioUrl ->
-                                        onInferenceResult(resultText, audioUrl)
+                                    uploadImageToBackend(rotatedBitmap) { resultText, audioUrl, status ->
+                                        onInferenceResult(resultText, audioUrl, status)
                                         val newCooldown = System.currentTimeMillis() + COOLDOWN_TIME_MS
                                         uploadState.cooldownUntil = newCooldown
                                         uploadState.isUploading = false

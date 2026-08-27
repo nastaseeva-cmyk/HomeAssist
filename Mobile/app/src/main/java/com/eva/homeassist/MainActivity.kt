@@ -3,6 +3,7 @@ package com.eva.homeassist
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
@@ -88,6 +89,7 @@ fun MainScreen() {
     var rawPersonScale by remember { mutableFloatStateOf(0f) }
     var aiMessage by remember { mutableStateOf("") }
     var isTalking by remember { mutableStateOf(false) }
+    var residentStatus by remember { mutableStateOf<String?>(null) }
     var isListening by remember { mutableStateOf(false) }
     var cooldownExpiration by remember { mutableLongStateOf(0L) }
     var isCooling by remember { mutableStateOf(false) }
@@ -113,6 +115,9 @@ fun MainScreen() {
                             if (result != null) {
                                 val text = result.first
                                 val audioUrl = result.second
+                                val status = result.third
+                                if (status != null) residentStatus = status
+                                
                                 if (text.isNotBlank()) {
                                     aiMessage = "You said: $text"
                                 }
@@ -145,6 +150,25 @@ fun MainScreen() {
             isCooling = false
         } else {
             isCooling = false
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(30_000)
+            try {
+                val statusData = pollStatus(BuildConfig.STATUS_URL, BuildConfig.LOCATION_NAME)
+                if (statusData != null) {
+                    if (statusData.status != null) residentStatus = statusData.status
+                    if (statusData.audioUrl != null) {
+                        AudioPlayer.play(
+                            url = statusData.audioUrl,
+                            onStart = { isTalking = true },
+                            onComplete = { isTalking = false }
+                        )
+                    }
+                }
+            } catch (_: Exception) {}
         }
     }
 
@@ -193,8 +217,9 @@ fun MainScreen() {
                             isPersonDetected = detected
                             rawPersonScale = scale
                         },
-                        onInferenceResult = { resultText, audioUrl ->
+                        onInferenceResult = { resultText, audioUrl, status ->
                             aiMessage = resultText
+                            if (status != null) residentStatus = status
                             if (audioUrl != null) {
                                 AudioPlayer.play(
                                     url = audioUrl,
@@ -225,6 +250,21 @@ fun MainScreen() {
                 color = Color.White,
                 modifier = Modifier.padding(top = 8.dp)
             )
+
+            residentStatus?.let { status ->
+                val (displayText, statusColor) = when (status) {
+                    "ok"           -> "OK" to Color(0xFF4CAF50)
+                    "danger"       -> "DANGER" to Color(0xFFF44336)
+                    "not_detected" -> "NOT DETECTED" to Color(0xFF9E9E9E)
+                    else           -> status.uppercase() to Color(0xFF9E9E9E)
+                }
+                Text(
+                    text = displayText,
+                    fontSize = 9.sp,
+                    color = statusColor,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
         }
     }
 }
