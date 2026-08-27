@@ -1,6 +1,6 @@
-import asyncio
 import os
 import time
+import asyncio
 from calls import tts
 from pathlib import Path
 from logger import get_logger
@@ -50,6 +50,8 @@ async def analyze_inactive_posture(model, location="Unknown"):
             if "RESULT: YES" in result.upper():
                 write_event("INACTIVE_POSTURE_DETECTED", f"Detected at '{location}' across {selected_images[0].name}, {selected_images[1].name}, {selected_images[2].name}")
                 update_current_status(location, "danger", "inactive_posture", "Dangerous inactive posture detected")
+            else:
+                update_current_status(location, "ok", "inactive_posture", "Posture check passed")
 
 async def act(client_host, filename, resident_in_picture, multiple_people, status, greeting, location="Unknown"):
     log.info(f"Resident: {resident_in_picture}, Multiple: {multiple_people}, Status: {status}")
@@ -143,6 +145,7 @@ async def check_routine_anomaly_for(model, location):
         
     if hours_missing < 2.0:
         log.info(f"Resident missing from '{location}' for {hours_missing:.1f}h. Below 2h threshold.")
+        update_current_status(location, "ok", "routine_anomaly", "Resident seen recently")
         return
         
     historical_datetimes = get_all_historical_timestamps_for(location)
@@ -160,6 +163,7 @@ async def check_routine_anomaly_for(model, location):
                 is_anomaly = True
                 
     if not is_anomaly:
+        update_current_status(location, "ok", "routine_anomaly", "No anomaly detected")
         return
         
     log.info(f"ANOMALY TRIGGERED for '{location}'. Generating TTS message via LLM...")

@@ -1,5 +1,6 @@
 import os
 import time
+import json
 import sqlite3
 import datetime
 from pathlib import Path
@@ -65,9 +66,15 @@ def init_db():
                 source TEXT,
                 detail TEXT,
                 audio_url TEXT,
-                updated_at TEXT NOT NULL
+                updated_at TEXT NOT NULL,
+                danger_sources TEXT DEFAULT '[]'
             )
         """)
+
+        try:
+            conn.execute("ALTER TABLE current_status ADD COLUMN danger_sources TEXT DEFAULT '[]'")
+        except sqlite3.OperationalError:
+            pass
 
 
 def write_conversation(entry):
@@ -220,44 +227,57 @@ def get_all_historical_timestamps_for(location):
 
     return datetimes
 
+VISUAL_SOURCES = {"detection", "inactive_posture", "routine_anomaly"}
+
 def update_current_status(location, status, source, detail=None, audio_url=None):
     updated_at = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     with sqlite3.connect(get_db_path()) as conn:
-        cursor = conn.execute("SELECT status, source FROM current_status WHERE location = ?", (location,))
+        cursor = conn.execute("SELECT status, danger_sources FROM current_status WHERE location = ?", (location,))
         row = cursor.fetchone()
-        
+
+        danger_sources = set()
         if row:
-            current_status = row[0]
-            current_source = row[1]
-            
-            if current_status == 'danger' and status != 'danger':
-                if source == 'stt':
-                    pass # Voice can always clear danger
-                elif current_source == 'routine_anomaly' and source == 'detection' and status == 'ok':
-                    pass # Finding the missing person clears routine anomaly
-                else:
-                    return # Block the overwrite
+            try:
+                danger_sources = set(json.loads(row[1])) if row[1] else set()
+            except (json.JSONDecodeError, TypeError):
+                danger_sources = set()
+
+        # Update per-source danger tracking
+        if status == "danger":
+            danger_sources.add(source)
+        else:
+            # Each visual source can only clear its own danger flag
+            if source in VISUAL_SOURCES:
+                danger_sources.discard(source)
+            elif source == "stt":
+                # Voice confirmation clears ALL danger sources
+                danger_sources.clear()
+
+        # Overall status stays 'danger' until ALL sources are resolved
+        effective_status = "danger" if danger_sources else status
+        danger_sources_json = json.dumps(sorted(danger_sources))
 
         conn.execute(
             """
-            INSERT INTO current_status (location, status, source, detail, audio_url, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO current_status (location, status, source, detail, audio_url, updated_at, danger_sources)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(location) DO UPDATE SET
                 status = excluded.status,
                 source = excluded.source,
                 detail = excluded.detail,
                 audio_url = COALESCE(excluded.audio_url, current_status.audio_url),
-                updated_at = excluded.updated_at
+                updated_at = excluded.updated_at,
+                danger_sources = excluded.danger_sources
             """,
-            (location, status, source, detail, audio_url, updated_at)
+            (location, effective_status, source, detail, audio_url, updated_at, danger_sources_json)
         )
         conn.commit()
 
 def get_current_status(location, clear_audio=True):
     with sqlite3.connect(get_db_path()) as conn:
         cursor = conn.execute(
-            "SELECT status, source, detail, audio_url, updated_at FROM current_status WHERE location = ?",
+            "SELECT status, source, detail, audio_url, updated_at, danger_sources FROM current_status WHERE location = ?",
             (location,)
         )
         row = cursor.fetchone()
@@ -265,12 +285,18 @@ def get_current_status(location, clear_audio=True):
         if not row:
             return None
 
+        try:
+            danger_sources = json.loads(row[5]) if row[5] else []
+        except (json.JSONDecodeError, TypeError):
+            danger_sources = []
+
         result = {
             "status": row[0],
             "source": row[1],
             "detail": row[2],
             "audio_url": row[3],
-            "updated_at": row[4]
+            "updated_at": row[4],
+            "danger_sources": danger_sources
         }
 
         # Clear audio_url after read so it only plays once

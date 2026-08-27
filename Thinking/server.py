@@ -89,7 +89,7 @@ async def stt_req(payload: STTRequest, request: Request):
     audio_url = None
     
     # 20 characters minimum length
-    if payload.lang == resident_language and len(payload.text.strip()) >= 20:
+    if payload.lang == resident_language and len(payload.text.strip()) >= 10:
         is_addressing, status_update, spoken_response = await asyncio.to_thread(process_stt_text, model, payload.text)
         
         if is_addressing.lower() == "yes" and spoken_response:
