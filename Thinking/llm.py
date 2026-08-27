@@ -157,8 +157,8 @@ def process_stt_text(llm, text):
 
     return is_addressing, status_update, spoken_response
 
-def process_routine_analysis(llm, hours_missing):
-    prompt = get_routine_analysis_prompt(hours_missing)
+def process_routine_analysis(llm, hours_missing, location=None):
+    prompt = get_routine_analysis_prompt(hours_missing, location)
     
     with llm_lock:
         response = llm.create_chat_completion(

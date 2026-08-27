@@ -152,7 +152,7 @@ def get_hours_since_resident_last_seen():
             "SELECT datestamp, timestamp FROM routine_logs WHERE resident_in_picture = 'yes' ORDER BY id DESC LIMIT 1"
         )
         row = cursor.fetchone()
-        
+    
     if not row:
         return -1.0 # Never seen
         
@@ -163,3 +163,50 @@ def get_hours_since_resident_last_seen():
     except Exception as e:
         log.error(f"Error parsing timestamp: {e}")
         return -1.0
+
+def get_distinct_locations():
+    with sqlite3.connect(get_db_path()) as conn:
+        cursor = conn.execute(
+            "SELECT DISTINCT location FROM routine_logs WHERE resident_in_picture = 'yes' AND location IS NOT NULL AND location != 'Unknown'"
+        )
+        rows = cursor.fetchall()
+
+    return [row[0] for row in rows]
+
+def get_hours_since_resident_last_seen_at(location):
+    with sqlite3.connect(get_db_path()) as conn:
+        cursor = conn.execute(
+            "SELECT datestamp, timestamp FROM routine_logs WHERE resident_in_picture = 'yes' AND location = ? ORDER BY id DESC LIMIT 1",
+            (location,)
+        )
+        row = cursor.fetchone()
+
+    if not row:
+        return -1.0
+
+    try:
+        last_time = datetime.datetime.strptime(f"{row[0]} {row[1]}", "%Y-%m-%d %H:%M:%S")
+        now = datetime.datetime.now()
+        return (now - last_time).total_seconds() / 3600.0
+    except Exception as e:
+        log.error(f"Error parsing timestamp for location '{location}': {e}")
+        return -1.0
+
+def get_all_historical_timestamps_for(location):
+    with sqlite3.connect(get_db_path()) as conn:
+        cursor = conn.execute(
+            "SELECT datestamp, timestamp FROM routine_logs WHERE resident_in_picture = 'yes' AND location = ?",
+            (location,)
+        )
+        rows = cursor.fetchall()
+
+    datetimes = []
+    for row in rows:
+        try:
+            dt = datetime.datetime.strptime(f"{row[0]} {row[1]}", "%Y-%m-%d %H:%M:%S")
+            datetimes.append(dt)
+        except Exception as e:
+            continue
+
+    return datetimes
+

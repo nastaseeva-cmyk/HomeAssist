@@ -4,7 +4,7 @@ from calls import tts
 from pathlib import Path
 from logger import get_logger
 from llm import process_inactive_sequence, process_routine_analysis
-from db import get_seconds_since_last_conversation, write_routine_log, write_event, write_conversation, get_all_historical_timestamps, get_hours_since_resident_last_seen
+from db import get_seconds_since_last_conversation, write_routine_log, write_event, write_conversation, get_all_historical_timestamps, get_hours_since_resident_last_seen, get_distinct_locations, get_hours_since_resident_last_seen_at, get_all_historical_timestamps_for
 
 
 log = get_logger("thinking")
@@ -12,9 +12,14 @@ log = get_logger("thinking")
 IMAGE_DIR = Path(__file__).resolve().parent.parent / "SharedData/images"
 IMAGE_DIR.mkdir(parents=True, exist_ok=True)
 
-def analyze_inactive_posture(model):
+def analyze_inactive_posture(model, location="Unknown"):
     interval = int(os.environ.get("INACTIVITY_INTERVAL_SECONDS", 7200))
-    images = sorted(IMAGE_DIR.glob("capture_*.jpg"), key=os.path.getmtime, reverse=True)
+    
+    location_dir = IMAGE_DIR / location
+    if not location_dir.exists():
+        return
+    
+    images = sorted(location_dir.glob("capture_*.jpg"), key=os.path.getmtime, reverse=True)
     
     if len(images) >= 3:
         newest = images[0]
@@ -33,16 +38,16 @@ def analyze_inactive_posture(model):
         
         # Ensure they are distinct images to prevent checking the same image 3 times
         if len(set(selected_images)) == 3:
-            log.info(f"Starting inactive posture inference across {interval} seconds...")
+            log.info(f"Starting inactive posture inference for '{location}' across {interval} seconds...")
             start_time = time.time()
             result = process_inactive_sequence(model, [str(img) for img in selected_images])
             elapsed_time = time.time() - start_time
             
-            log.info(f"inactive_posture_inference_time: {elapsed_time:.2f}s")
+            log.info(f"inactive_posture_inference_time: {elapsed_time:.2f}s (location: {location})")
             log.info(f"inactive_posture_result: {result}")
             
             if "RESULT: YES" in result.upper():
-                write_event("INACTIVE_POSTURE_DETECTED", f"Detected across {selected_images[0].name}, {selected_images[1].name}, {selected_images[2].name}")
+                write_event("INACTIVE_POSTURE_DETECTED", f"Detected at '{location}' across {selected_images[0].name}, {selected_images[1].name}, {selected_images[2].name}")
 
 async def act(client_host, filename, resident_in_picture, multiple_people, status, greeting, location="Unknown"):
     log.info(f"Resident: {resident_in_picture}, Multiple: {multiple_people}, Status: {status}")
@@ -116,31 +121,28 @@ async def act(client_host, filename, resident_in_picture, multiple_people, statu
             },
         }
 
-async def check_routine_anomaly(model):
+async def check_routine_anomaly_for(model, location):
     import asyncio
     import datetime
     from anomaly_model import predict_anomaly
-    
-    log.info("Starting rule-based & ML anomaly check...")
     
     now = datetime.datetime.now()
     current_hour = now.hour
     
     if current_hour >= 23 or current_hour < 7:
-        log.info("Night time active. Ignoring routine checks.")
         return
         
-    hours_missing = get_hours_since_resident_last_seen()
+    hours_missing = get_hours_since_resident_last_seen_at(location)
     
     if hours_missing < 0:
-        log.info("Resident never seen yet. Skipping anomaly check.")
+        log.info(f"Resident never seen at '{location}'. Skipping anomaly check.")
         return
         
     if hours_missing < 2.0:
-        log.info(f"Resident missing for {hours_missing:.1f}h. Below 2h threshold.")
+        log.info(f"Resident missing from '{location}' for {hours_missing:.1f}h. Below 2h threshold.")
         return
         
-    historical_datetimes = get_all_historical_timestamps()
+    historical_datetimes = get_all_historical_timestamps_for(location)
     
     is_anomaly = False
     
@@ -157,17 +159,41 @@ async def check_routine_anomaly(model):
     if not is_anomaly:
         return
         
-    log.info(f"ANOMALY TRIGGERED. Generating TTS message via LLM...")
+    log.info(f"ANOMALY TRIGGERED for '{location}'. Generating TTS message via LLM...")
     start_time = time.time()
-    spoken_message = await asyncio.to_thread(process_routine_analysis, model, hours_missing)
+    spoken_message = await asyncio.to_thread(process_routine_analysis, model, hours_missing, location)
     elapsed_time = time.time() - start_time
     
-    log.info(f"TTS_generation_time: {elapsed_time:.2f}s, message: {spoken_message}")
+    log.info(f"TTS_generation_time: {elapsed_time:.2f}s, location: {location}, message: {spoken_message}")
     
     if spoken_message:
-        write_event("ROUTINE_ANOMALY_DETECTED", f"Resident missing for {hours_missing:.1f}h. Message: {spoken_message}")
+        write_event("ROUTINE_ANOMALY_DETECTED", f"Resident missing from '{location}' for {hours_missing:.1f}h. Message: {spoken_message}")
         write_conversation(spoken_message)
         client_host = os.environ.get("THINKING_HOST", "127.0.0.1")
         await tts(client_host, spoken_message)
 
+async def check_routine_anomaly(model):
+    import datetime
     
+    log.info("Starting per-location routine anomaly check...")
+    
+    now = datetime.datetime.now()
+    current_hour = now.hour
+    
+    if current_hour >= 23 or current_hour < 7:
+        log.info("Night time active. Ignoring routine checks.")
+        return
+    
+    locations = get_distinct_locations()
+    
+    if not locations:
+        log.info("No known locations yet. Skipping anomaly check.")
+        return
+    
+    log.info(f"Checking anomaly for {len(locations)} location(s): {locations}")
+    
+    for location in locations:
+        try:
+            await check_routine_anomaly_for(model, location)
+        except Exception as e:
+            log.error(f"Error in routine anomaly check for '{location}': {e}")

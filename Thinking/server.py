@@ -51,7 +51,9 @@ async def detection_req(
     else:
         extension = "bin"
 
-    filename = IMAGE_DIR / f"capture_{int(time.time() * 1000)}.{extension}"
+    location_dir = IMAGE_DIR / location
+    location_dir.mkdir(parents=True, exist_ok=True)
+    filename = location_dir / f"capture_{int(time.time() * 1000)}.{extension}"
     filename.write_bytes(image_bytes)
 
 
@@ -71,7 +73,7 @@ async def detection_req(
     write_routine_log(resident_in_picture, multiple_people, status, location)
     response_payload = await act(client_host, filename, resident_in_picture, multiple_people, status, greeting, location)
 
-    background_tasks.add_task(analyze_inactive_posture, model)
+    background_tasks.add_task(analyze_inactive_posture, model, location)
 
     return response_payload
 

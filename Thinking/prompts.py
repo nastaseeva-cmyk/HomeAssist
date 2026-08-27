@@ -71,11 +71,13 @@ Return ONLY a JSON object:
 }}
 """
 
-def get_routine_analysis_prompt(hours_missing):
+def get_routine_analysis_prompt(hours_missing, location=None):
     resident_language = os.environ.get("RESIDENT_LANGUAGE", "en")
     
+    location_context = f" in the {location}" if location else ""
+    
     return f"""
-You are an AI home assistant. The resident has not been seen by the cameras for over {hours_missing:.1f} hours, which has been flagged as a statistical anomaly.
+You are an AI home assistant. The resident has not been seen by the cameras {location_context} for over {hours_missing:.1f} hours, which has been flagged as a statistical anomaly.
 
 Generate a very brief, natural, and concerned message in '{resident_language}' asking if they are alright, to be spoken over the home speaker.
 
