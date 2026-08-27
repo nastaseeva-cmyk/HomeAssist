@@ -38,6 +38,26 @@ This is a mono-repo containing all required components:
   Model: fast-whisper/whisper-large-v3<br>
   A Python microservice running a Speech-to-Text (STT) model. Gets voice audio from Mobile and calls Thinking service with detected language and text for further processing.
 
+```mermaid
+graph LR
+    subgraph Edge Device
+        M["Mobile App<br/>(Kotlin/Android)"]
+    end
+
+    subgraph Backend - Docker Compose
+        T["Thinking Service<br/>(FastAPI + Gemma 4 LLM)"]
+        S["Speaking Service<br/>(FastAPI + OmniVoice TTS)"]
+        H["Hearing Service<br/>(FastAPI + Whisper STT)"]
+    end
+
+    M -- "POST /detection<br/>(camera frames)" --> T
+    M -- "POST /stt<br/>(voice audio)" --> H
+    M -- "GET /status<br/>(polling)" --> T
+    H -- "POST /stt<br/>(transcribed text)" --> T
+    T -- "POST /tts<br/>(text to speak)" --> S
+    S -- "GET /audio/{file}<br/>(audio stream)" --> M
+```
+
 ---
 
 ## Surveillance Routines
@@ -173,32 +193,3 @@ If you plan using docker-compose - put all the configs into a single config.env 
 docker compose up --build
 ```
 At this point, the application backend should be up and running locally. You can install the mobile app and start testing.
-
-
-
-```mermaid
-graph LR
-    subgraph Edge Device
-        M["Mobile App<br/>(Kotlin/Android)"]
-    end
-
-    subgraph Backend - Docker Compose
-        T["Thinking Service<br/>(FastAPI + Gemma 4 LLM)"]
-        S["Speaking Service<br/>(FastAPI + OmniVoice TTS)"]
-        H["Hearing Service<br/>(FastAPI + Whisper STT)"]
-    end
-
-    M -- "POST /detection<br/>(camera frames)" --> T
-    M -- "POST /stt<br/>(voice audio)" --> H
-    M -- "GET /status<br/>(polling)" --> T
-    H -- "POST /stt<br/>(transcribed text)" --> T
-    T -- "POST /tts<br/>(text to speak)" --> S
-    S -- "GET /audio/{file}<br/>(audio stream)" --> M
-```
-
-| Component | Tech Stack | Lines | Role |
-|-----------|-----------|-------|------|
-| **Thinking** | Python, FastAPI, llama-cpp, SQLite, IsolationForest | 780 | Central brain — LLM inference, anomaly detection, state management |
-| **Speaking** | Python, FastAPI, OmniVoice, soundfile | 170 | Text-to-Speech synthesis |
-| **Hearing** | Python, FastAPI, faster-whisper | 200 | Speech-to-Text transcription |
-| **Mobile** | Kotlin, Jetpack Compose, CameraX, MLKit, TFLite, Silero VAD | 1,267 | Android edge client — vision, voice, UI |
