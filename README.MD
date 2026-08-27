@@ -165,7 +165,7 @@ CORTEX_STT_PORT = 7000
 
 ## Build & Run
 
-To ensure the containers can communicate with each other (e.g., Thinking reaching Speaking via the `TTS_HOST` name, Hearing reaching Thinking via the `THINKING_STT_HOST`) a dedicated Docker network will be used.
+To ensure the containers can communicate with each other (e.g., Thinking reaching Speaking via the `TTS_HOST` name, Hearing reaching Thinking via the `CORTEX_STT_HOST`) a dedicated Docker network will be used.
 If you plan using docker-compose - put all the configs into a single config.env in the SharedData folder. If you run locally - you can go for dedicated files.
 
 ### Run docker compose from the root directory of the repository (`HomeAssist`)
