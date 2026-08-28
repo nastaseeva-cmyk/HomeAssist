@@ -13,8 +13,6 @@ ENV FORCE_CMAKE=1
 
 RUN pip3 install --no-cache-dir -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cu124
  
-RUN pip3 install --no-cache-dir scikit-learn==1.4.2
-
 COPY . /app/Thinking
 
 EXPOSE 7000
