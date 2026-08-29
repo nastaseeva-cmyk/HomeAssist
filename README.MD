@@ -17,7 +17,7 @@ The Proof of Concept (POC) backend is designed to run on a laptop equipped with 
 ## Demo & Real-World Showcase
 To see how the application performs in a real-world scenario (including edge detection, LLM reasoning, and TTS), please check the `demo` folder. 
 
-<video src="https://github.com/nastaseeva-cmyk/HomeAssist/blob/main/demo/demo.mp4" controls="controls" width="100%"></video>
+<video src="https://github.com/nastaseeva-cmyk/HomeAssist/raw/main/demo/demo.mp4" controls="controls" width="100%"></video>
 
 You can also explore the raw outputs generated during the demo:
 - **Action Logs:** [demo/logs](demo/logs/)
