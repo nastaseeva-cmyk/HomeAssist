@@ -1,0 +1,7 @@
+2026-08-29 11:11:53,826 - speaking - INFO - Loading OmniVoice model from /etc/models/omnivoice
+2026-08-29 11:12:00,009 - speaking - INFO - Starting Speaking TTS endpoint on http://0.0.0.0:9001/tts (FastAPI)
+2026-08-29 11:12:59,411 - speaking - INFO - Generated speech -> /app/SharedData/audio/4488a539c891aa69e9c2e8ce8a74a469e2072edb.wav (tts_time: 2.34s)
+2026-08-29 11:13:12,443 - speaking - INFO - Generated speech -> /app/SharedData/audio/b9fd46ba78f3c0f5cdfcc0dc0acdbdd953c90c3c.wav (tts_time: 2.89s)
+2026-08-29 11:13:27,728 - speaking - INFO - Generated speech -> /app/SharedData/audio/49d0df6fc9150b5db7f392047810cfde8e3039ee.wav (tts_time: 1.47s)
+2026-08-29 11:14:06,652 - speaking - INFO - Generated speech -> /app/SharedData/audio/c746e441f5c501a9aa8e3c4131cfca589126d95b.wav (tts_time: 1.71s)
+2026-08-29 11:14:22,971 - speaking - INFO - Generated speech -> /app/SharedData/audio/53e4fb7f94eca188af594b2f65b7e09e80780320.wav (tts_time: 0.92s)

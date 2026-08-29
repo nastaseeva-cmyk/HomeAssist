@@ -14,6 +14,19 @@ The project introduces an adaptive home assistant for vulnerable people living a
 
 The Proof of Concept (POC) backend is designed to run on a laptop equipped with an RTX 4080 GPU (12GB VRAM).
 
+## Demo & Real-World Showcase
+To see how the application performs in a real-world scenario (including edge detection, LLM reasoning, and TTS), please check the `demo` folder. 
+
+**[Watch the Mobile App Screen Recording](demo/demo.mp4)**
+
+You can also explore the raw outputs generated during the demo:
+- **Action Logs:** [demo/logs](demo/logs/)
+- **Captured Images:** [demo/image/livingroom](demo/images/livingroom/)
+- **Generated Audio (TTS):** [demo/audio](demo/audio/)
+- **Database:** [demo/audio](demo/db/)
+- **Resident picture:** [demo/audio](demo/resident/)
+- **Demo env:** [demo/audio](demo/config.env)
+
 ## Architecture & Repository Structure
 This is a mono-repo containing all required components:
 

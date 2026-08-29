@@ -88,3 +88,19 @@ Return ONLY a JSON object:
   "spoken_message": "your message here"
 }}
 """
+
+def get_inactive_posture_tts_prompt(location=None):
+    resident_language = os.environ.get("RESIDENT_LANGUAGE", "en")
+    
+    location_context = f" in the {location}" if location else ""
+    
+    return f"""
+You are an AI home assistant. The resident has been detected maintaining a potentially dangerous inactive posture (like lying on the floor or collapsed){location_context} for a prolonged period.
+
+Generate a very brief, natural, and highly concerned message in '{resident_language}' asking if they are alright or if they need help, to be spoken over the home speaker.
+
+Return ONLY a JSON object:
+{{
+  "spoken_message": "your message here"
+}}
+"""

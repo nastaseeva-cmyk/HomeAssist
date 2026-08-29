@@ -1,11 +1,11 @@
 # Python caches
 **/__pycache__/
 *.py[cod]
-*.jpeg
-*.jpg
-*.png
-*.log
-*.env
+# *.jpeg
+# *.jpg
+# *.png
+# *.log
+# *.env
 
 # Generated media files
 SharedData/db/*
@@ -13,6 +13,12 @@ SharedData/audio/*
 SharedData/images/*
 SharedData/logs/*
 SharedData/resident/*
+SharedData/*
+
+Thinking/*.env
+Speaking/*.env
+Hearing/*.env
+
 
 # Android / IDE artifacts
 *.iml

@@ -1,0 +1,5 @@
+2026-08-29 11:11:54,463 - hearing - INFO - Starting Hearing endpoint on http://0.0.0.0:8000/stt (FastAPI)
+2026-08-29 11:13:07,767 - hearing - INFO - stt_time: 0.95s / ro:Maria, mă doare capul.
+2026-08-29 11:13:24,847 - hearing - INFO - stt_time: 1.54s / ro:Maria, nu mă mai doare capul!
+2026-08-29 11:13:40,964 - hearing - INFO - stt_time: 3.42s / nn:
+2026-08-29 11:14:20,400 - hearing - INFO - stt_time: 1.94s / ro:Sunt bine, Maria. Mi-am revenit. Mulțumesc.

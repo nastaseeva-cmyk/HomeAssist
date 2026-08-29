@@ -5,7 +5,7 @@ import datetime
 from calls import tts
 from pathlib import Path
 from logger import get_logger
-from llm import process_inactive_sequence, process_routine_analysis
+from llm import process_inactive_sequence, process_routine_analysis, process_inactive_posture_tts
 from db import get_seconds_since_last_conversation, write_routine_log, write_event, write_conversation, get_all_historical_timestamps, get_hours_since_resident_last_seen, get_distinct_locations, get_hours_since_resident_last_seen_at, get_all_historical_timestamps_for, update_current_status
 
 
@@ -49,8 +49,18 @@ async def analyze_inactive_posture(model, location="Unknown"):
             log.info(f"inactive_posture_result: {result}")
             
             if "RESULT: YES" in result.upper():
-                write_event("INACTIVE_POSTURE_DETECTED", f"Detected at '{location}' across {selected_images[0].name}, {selected_images[1].name}, {selected_images[2].name}")
-                update_current_status(location, "danger", "inactive_posture", "Dangerous inactive posture detected")
+                log.info(f"INACTIVE POSTURE TRIGGERED for '{location}'. Generating TTS message via LLM...")
+                spoken_message = await asyncio.to_thread(process_inactive_posture_tts, model, location)
+                
+                if spoken_message:
+                    write_event("INACTIVE_POSTURE_DETECTED", f"Detected at '{location}' across {selected_images[0].name}, {selected_images[1].name}, {selected_images[2].name}. Message: {spoken_message}")
+                    write_conversation(spoken_message)
+                    client_host = os.environ.get("THINKING_HOST", "127.0.0.1")
+                    audio_url = await tts(client_host, spoken_message)
+                    update_current_status(location, "danger", "inactive_posture", "Dangerous inactive posture detected", audio_url)
+                else:
+                    write_event("INACTIVE_POSTURE_DETECTED", f"Detected at '{location}' across {selected_images[0].name}, {selected_images[1].name}, {selected_images[2].name}")
+                    update_current_status(location, "danger", "inactive_posture", "Dangerous inactive posture detected")
             else:
                 update_current_status(location, "ok", "inactive_posture", "Posture check passed")
 

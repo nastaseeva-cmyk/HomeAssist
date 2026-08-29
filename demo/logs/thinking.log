@@ -1,0 +1,54 @@
+2026-08-29 11:11:38,290 - thinking - INFO - Starting Thinking image endpoint on http://0.0.0.0:7000/detection (FastAPI)
+2026-08-29 11:12:38,337 - thinking - INFO - Starting per-location routine anomaly check...
+2026-08-29 11:12:38,346 - thinking - INFO - No known locations yet. Skipping anomaly check.
+2026-08-29 11:12:56,607 - thinking - INFO - llm_time: 3.88s
+2026-08-29 11:12:56,608 - thinking - INFO - Inference result raw: ```json
+{
+  "resident_in_picture": "yes",
+  "multiple_people": "no",
+  "status": "ok",
+  "spoken_message": "Totul arată bine la tine, Eva.",
+  "short_description": "There is one person present, who is Eva. She is sitting upright on the sofa. The status is 'ok' as she appears safe."
+}
+```
+2026-08-29 11:12:56,610 - thinking - INFO - Resident: yes, Multiple: no, Status: ok
+2026-08-29 11:13:07,818 - thinking - INFO - Incoming stt - lang: ro, text: Maria, mă doare capul.
+2026-08-29 11:13:09,503 - thinking - INFO - STT Inference raw: ```json
+{
+  "is_addressing_assistant": "yes",
+  "status_update": "danger",
+  "spoken_response": "Îmi pare rău să aud asta. Ce îți place să faci pentru a te ameliora?"
+}
+```
+2026-08-29 11:13:12,614 - thinking - INFO - /stt response: {'status': 'done', 'lang': 'ro', 'text': 'Maria, mă doare capul.', 'resident_status': 'danger', 'audio_url': 'http://thinking-service:9001/audio/b9fd46ba78f3c0f5cdfcc0dc0acdbdd953c90c3c.wav'}
+2026-08-29 11:13:24,973 - thinking - INFO - Incoming stt - lang: ro, text: Maria, nu mă mai doare capul!
+2026-08-29 11:13:25,697 - thinking - INFO - STT Inference raw: ```json
+{
+  "is_addressing_assistant": "yes",
+  "status_update": "ok",
+  "spoken_response": "Mă bucur să aud asta!"
+}
+```
+2026-08-29 11:13:27,816 - thinking - INFO - /stt response: {'status': 'done', 'lang': 'ro', 'text': 'Maria, nu mă mai doare capul!', 'resident_status': 'ok', 'audio_url': 'http://thinking-service:9001/audio/49d0df6fc9150b5db7f392047810cfde8e3039ee.wav'}
+2026-08-29 11:13:41,012 - thinking - INFO - Incoming stt - lang: nn, text: 
+2026-08-29 11:13:41,012 - thinking - INFO - /stt response: {'status': 'done', 'lang': 'nn', 'text': '', 'resident_status': 'ok'}
+2026-08-29 11:14:04,345 - thinking - INFO - llm_time: 3.61s
+2026-08-29 11:14:04,347 - thinking - INFO - Inference result raw: ```json
+{
+  "resident_in_picture": "yes",
+  "multiple_people": "yes",
+  "status": "danger",
+  "spoken_message": "Îmi pare rău să văd că ești pe podea. Ai nevoie de ajutor?",
+  "short_description": "There are two people present. The resident is among them. One person is lying on the floor, indicating a safety concern, so the status is set to danger."
+}
+```
+2026-08-29 11:14:04,347 - thinking - INFO - Resident: yes, Multiple: yes, Status: danger
+2026-08-29 11:14:20,580 - thinking - INFO - Incoming stt - lang: ro, text: Sunt bine, Maria. Mi-am revenit. Mulțumesc.
+2026-08-29 11:14:21,469 - thinking - INFO - STT Inference raw: ```json
+{
+  "is_addressing_assistant": "yes",
+  "status_update": "ok",
+  "spoken_response": "Mă bucuros să aud asta!"
+}
+```
+2026-08-29 11:14:23,065 - thinking - INFO - /stt response: {'status': 'done', 'lang': 'ro', 'text': 'Sunt bine, Maria. Mi-am revenit. Mulțumesc.', 'resident_status': 'ok', 'audio_url': 'http://thinking-service:9001/audio/53e4fb7f94eca188af594b2f65b7e09e80780320.wav'}

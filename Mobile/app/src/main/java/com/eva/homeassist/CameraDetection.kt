@@ -72,8 +72,8 @@ fun FrontCameraPreview(
                     }
 
                     val options = ObjectDetector.ObjectDetectorOptions.builder()
-                        .setMaxResults(5)
-                        .setScoreThreshold(0.5f)
+                        .setMaxResults(15)
+                        .setScoreThreshold(0.25f)
                         .build()
                     val objectDetector = ObjectDetector.createFromFileAndOptions(context, "efficientdet.tflite", options)
 

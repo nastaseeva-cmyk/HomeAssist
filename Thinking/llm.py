@@ -8,7 +8,7 @@ from llama_cpp import Llama
 from logger import get_logger
 
 llm_lock = threading.Lock()
-from prompts import get_image_prompt, get_inactive_posture_prompt, get_stt_prompt, get_routine_analysis_prompt
+from prompts import get_image_prompt, get_inactive_posture_prompt, get_stt_prompt, get_routine_analysis_prompt, get_inactive_posture_tts_prompt
 from llama_cpp.llama_chat_format import Gemma4ChatHandler 
 
 
@@ -187,6 +187,42 @@ def process_routine_analysis(llm, hours_missing, location=None):
         inference_json = {k: v for k, v in raw_json.items()}
     except json.JSONDecodeError:
         log.error(f"Error parsing Routine JSON response")
+        inference_json = {}
+
+    spoken_message = inference_json.get("spoken_message", "")
+
+    return spoken_message
+
+def process_inactive_posture_tts(llm, location=None):
+    prompt = get_inactive_posture_tts_prompt(location)
+    
+    with llm_lock:
+        response = llm.create_chat_completion(
+            messages=[
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+            temperature=0.1,
+            response_format=None
+        )
+    
+    response_str = response["choices"][0]["message"]["content"]
+    
+    log.info(f"Inactive Posture TTS Inference raw: {response_str}") 
+    
+    json_match = re.search(r'\{.*\}', response_str, re.DOTALL)
+    if json_match:
+        clean_json_str = json_match.group(0)
+    else:
+        clean_json_str = response_str
+
+    try:
+        raw_json = json.loads(clean_json_str)
+        inference_json = {k: v for k, v in raw_json.items()}
+    except json.JSONDecodeError:
+        log.error(f"Error parsing Inactive Posture TTS JSON response")
         inference_json = {}
 
     spoken_message = inference_json.get("spoken_message", "")
